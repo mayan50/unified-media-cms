@@ -3,3 +3,4 @@
 /.claude/
 /frontend/.vscode/
 /backend/.idea/
+.DS_Store
