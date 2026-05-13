@@ -20,3 +20,5 @@
 *.sw?
 /.vscode/
 **/.DS_Store
+**/.idea
+**/.vscode
