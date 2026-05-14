@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, type Ref } from 'vue'
-import { getStorageNodes, browseStorageNode } from '../../api/modules'
+import { getStorageNodes, browseStorageNode } from '../api/modules'
 
 export interface StoragePathValue {
   storage_node_id: string

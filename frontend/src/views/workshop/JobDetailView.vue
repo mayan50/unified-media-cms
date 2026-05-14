@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getJob, getJobTasks, startJob, stopJob, resetJob, deleteJob, retryTask } from '../api/modules'
+import { getJob, getJobTasks, startJob, stopJob, resetJob, deleteJob, retryTask } from '../../api/modules'
 import { Client } from '@stomp/stompjs'
 const route = useRoute()
 const router = useRouter()
@@ -134,7 +134,7 @@ onUnmounted(() => { stompClient?.deactivate() })
     <template v-if="job">
       <!-- Top bar -->
       <div class="jd-top">
-        <v-btn icon="mdi-arrow-left" size="small" variant="plain" @click="router.push('/workshop/tasks')" />
+        <v-btn icon="mdi-arrow-left" size="small" variant="plain" @click="router.push('/workshop/jobs')" />
         <span class="text-caption text-disabled ml-2">作业详情</span>
       </div>
 
@@ -243,7 +243,7 @@ onUnmounted(() => { stompClient?.deactivate() })
                     <span class="stb" :style="{ background: sc(t.status).color }">{{ sc(t.status).label }}</span>
                   </td>
                   <td>
-                    <a class="jd-task-link" @click="router.push(`/workshop/records/${t.id}`)">
+                    <a class="jd-task-link" @click="router.push(`/workshop/tasks/${t.id}`)">
                       {{ t.filePath?.split('/').pop() || t.filePath || '-' }}
                     </a>
                   </td>
@@ -254,7 +254,7 @@ onUnmounted(() => { stompClient?.deactivate() })
                       :loading="actionLoading === 'retry-' + t.id"
                       @click="doRetryTask(t.id)" />
                     <v-btn v-else icon="mdi-dots-vertical" size="x-small" variant="text"
-                      @click="router.push(`/workshop/records/${t.id}`)" />
+                      @click="router.push(`/workshop/tasks/${t.id}`)" />
                   </td>
                 </tr>
                 <tr v-if="!filteredTasks.length">

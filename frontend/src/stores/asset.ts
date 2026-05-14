@@ -7,12 +7,10 @@ export const useAssetStore = defineStore('asset', () => {
   const currentAsset = ref<any>(null)
   const loading = ref(false)
 
-  async function fetchAssets(status?: string) {
+  async function fetchAssets() {
     loading.value = true
     try {
-      const params: any = {}
-      if (status) params.status = status
-      const { data } = await getAssets(params)
+      const { data } = await getAssets()
       assets.value = data
     } finally {
       loading.value = false

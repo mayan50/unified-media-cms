@@ -48,5 +48,5 @@ public interface PipelineNode {
     boolean canExecute(TaskContext context);
 
     /** 核心执行逻辑，直接修改 context；若需仲裁则抛出 ArbitrationRequiredException */
-    void execute(TaskContext context) throws Exception;
+    void execute(TaskContext context);
 }

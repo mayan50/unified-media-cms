@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getLlmConfig, saveLlmConfig } from '../api/modules'
-import { useToast } from '../composables/useToast'
+import { getLlmConfig, saveLlmConfig } from '../../api/modules'
+import { useToast } from '../../composables/useToast'
 
 const { toast } = useToast()
 const config = ref({ provider: 'ollama', baseUrl: '', apiKey: '', modelName: '' })

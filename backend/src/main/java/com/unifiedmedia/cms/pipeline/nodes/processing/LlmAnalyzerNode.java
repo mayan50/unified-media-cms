@@ -47,7 +47,7 @@ public class LlmAnalyzerNode extends BaseProcessingNode {
     }
 
     @Override
-    public void execute(TaskContext context) throws Exception {
+    public void execute(TaskContext context) {
         String text = context.getPipelineData(PipelineKeys.EXTRACTED_TEXT, String.class);
         ChatClient chatClient = "openai".equalsIgnoreCase(llmProvider)
                 ? ChatClient.create(openAiChatModel)

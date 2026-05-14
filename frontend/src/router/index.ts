@@ -6,12 +6,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'Library',
-      component: () => import('../views/LibraryView.vue'),
+      component: () => import('../views/library/LibraryView.vue'),
     },
     {
       path: '/asset/:id',
       name: 'AssetDetail',
-      component: () => import('../views/AssetDetailView.vue'),
+      component: () => import('../views/library/AssetDetailView.vue'),
     },
     {
       path: '/settings',
@@ -21,22 +21,22 @@ const router = createRouter({
         {
           path: 'storage',
           name: 'SettingsStorage',
-          component: () => import('../views/SettingsStorageView.vue'),
+          component: () => import('../views/settings/SettingsStorageView.vue'),
         },
         {
           path: 'llm',
           name: 'SettingsLlm',
-          component: () => import('../views/SettingsLlmView.vue'),
+          component: () => import('../views/settings/SettingsLlmView.vue'),
         },
         {
           path: 'categories-tags',
           name: 'SettingsCategoriesTags',
-          component: () => import('../views/SettingsCategoriesTagsView.vue'),
+          component: () => import('../views/settings/SettingsCategoriesTagsView.vue'),
         },
         {
           path: 'plugins',
           name: 'SettingsPlugins',
-          component: () => import('../views/SettingsPluginView.vue'),
+          component: () => import('../views/settings/SettingsPluginView.vue'),
         },
       ],
     },
@@ -49,27 +49,27 @@ const router = createRouter({
         {
           path: 'templates',
           name: 'WorkshopTemplates',
-          component: () => import('../components/workshop/TemplateBuilder.vue'),
+          component: () => import('../views/workshop/TemplateBuilder.vue'),
+        },
+        {
+          path: 'jobs',
+          name: 'WorkshopJobs',
+          component: () => import('../views/workshop/JobCenter.vue'),
+        },
+        {
+          path: 'jobs/:id',
+          name: 'JobDetail',
+          component: () => import('../views/workshop/JobDetailView.vue'),
         },
         {
           path: 'tasks',
           name: 'WorkshopTasks',
-          component: () => import('../components/workshop/TaskCenter.vue'),
+          component: () => import('../views/workshop/TaskListView.vue'),
         },
         {
           path: 'tasks/:id',
           name: 'TaskDetail',
-          component: () => import('../views/TaskDetailView.vue'),
-        },
-        {
-          path: 'records',
-          name: 'WorkshopRecords',
-          component: () => import('../views/TaskHistoryView.vue'),
-        },
-        {
-          path: 'records/:id',
-          name: 'RecordDetail',
-          component: () => import('../views/TaskRecordDetailView.vue'),
+          component: () => import('../views/workshop/TaskDetailView.vue'),
         },
       ],
     },

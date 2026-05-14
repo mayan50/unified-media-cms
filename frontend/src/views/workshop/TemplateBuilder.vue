@@ -9,8 +9,8 @@ import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import { getTemplates, createTemplate, updateTemplate, getNodeRegistry } from '../../api/modules'
 import { useToast } from '../../composables/useToast'
-import FlowNode from './FlowNode.vue'
-import StoragePathSelector from './StoragePathSelector.vue'
+import FlowNode from '../../components/FlowNode.vue'
+import StoragePathSelector from '../../components/StoragePathSelector.vue'
 
 const { toast } = useToast()
 const route = useRoute()

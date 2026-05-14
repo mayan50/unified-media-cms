@@ -50,7 +50,7 @@ public class StorageNode {
     @JsonProperty("connectionConfig")
     public Object getConnectionConfigParsed() {
         if (connectionConfig == null) return null;
-        try { return MAPPER.readValue(connectionConfig, new TypeReference<Object>() {}); }
+        try { return MAPPER.readValue(connectionConfig, new TypeReference<>() {}); }
         catch (Exception e) { return connectionConfig; }
     }
 

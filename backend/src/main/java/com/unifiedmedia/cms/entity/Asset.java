@@ -1,5 +1,6 @@
 package com.unifiedmedia.cms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -35,6 +36,7 @@ public class Asset {
     @Column(columnDefinition = "TEXT")
     private String summary;
 
+    @JsonIgnore
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "asset_tags",
             joinColumns = @JoinColumn(name = "asset_id"),
@@ -42,6 +44,7 @@ public class Asset {
     @Builder.Default
     private Set<Tag> tags = new HashSet<>();
 
+    @JsonIgnore
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "asset_categories",
             joinColumns = @JoinColumn(name = "asset_id"),

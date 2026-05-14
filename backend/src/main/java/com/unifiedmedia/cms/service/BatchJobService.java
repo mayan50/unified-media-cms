@@ -36,7 +36,6 @@ public class BatchJobService {
     private final List<PipelineEventListener> eventListeners;
 
     private final FileTaskExecutor fileTaskExecutor;
-    @Qualifier("pipelineTaskExecutor")
     private final Executor pipelineTaskExecutor;
     private final TransactionTemplate transactionTemplate;
 
@@ -248,9 +247,7 @@ public class BatchJobService {
         // Concurrent dispatch: each file runs in its own transaction via FileTaskExecutor
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (FileCandidate file : files) {
-            futures.add(CompletableFuture.runAsync(() -> {
-                fileTaskExecutor.executeFilePipeline(jobId, file, globalConfigs, parsed.nodes, parsed.sorted, nm);
-            }, pipelineTaskExecutor));
+            futures.add(CompletableFuture.runAsync(() -> fileTaskExecutor.executeFilePipeline(jobId, file, globalConfigs, parsed.nodes, parsed.sorted, nm), pipelineTaskExecutor));
         }
 
         try {

@@ -56,8 +56,7 @@ public class EpubMetaParserNode extends BaseProcessingNode {
         if (metadata.containsKey("creator")) {
             Object creator = metadata.get("creator");
             if (creator instanceof String s && !s.isBlank()) {
-                List<String> authors = creator instanceof List<?> l ? l.stream().map(Object::toString).toList()
-                        : List.of(s);
+                List<String> authors = List.of(s);
                 setIntentIfUnlocked(context, "authors", PipelineKeys.AUTHORS, authors);
             }
         }

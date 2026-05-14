@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAssetStore } from '../stores/asset'
-import { useToast } from '../composables/useToast'
+import { useAssetStore } from '../../stores/asset'
+import { useToast } from '../../composables/useToast'
 
 const { toast } = useToast()
 

@@ -8,15 +8,11 @@ import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
 import com.unifiedmedia.cms.pipeline.spi.RelationMerger;
 import com.unifiedmedia.cms.repository.AssetCreatorRepository;
 import com.unifiedmedia.cms.repository.CreatorRepository;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
-@RequiredArgsConstructor
-public class CreatorRelationMerger implements RelationMerger {
-
-    private final CreatorRepository creatorRepository;
-    private final AssetCreatorRepository assetCreatorRepository;
+public record CreatorRelationMerger(CreatorRepository creatorRepository,
+                                    AssetCreatorRepository assetCreatorRepository) implements RelationMerger {
 
     @Override
     public void merge(TaskContext context, Asset asset) {

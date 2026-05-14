@@ -2,8 +2,6 @@ package com.unifiedmedia.cms.controller;
 
 import com.unifiedmedia.cms.dto.JobSubmitRequest;
 import com.unifiedmedia.cms.entity.BatchJob;
-import com.unifiedmedia.cms.entity.Task;
-import com.unifiedmedia.cms.entity.TaskNodeLog;
 import com.unifiedmedia.cms.service.BatchJobService;
 import com.unifiedmedia.cms.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -20,8 +17,6 @@ public class BatchJobController {
 
     private final BatchJobService jobService;
     private final TaskService taskService;
-
-    // ==================== Job CRUD ====================
 
     @PostMapping
     public ResponseEntity<BatchJob> createJob(@RequestBody JobSubmitRequest req) {
@@ -87,50 +82,5 @@ public class BatchJobController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "50") int size) {
         return ResponseEntity.ok(taskService.getTasksPaged(jobId, page, size));
-    }
-
-    @GetMapping("/nodes")
-    public ResponseEntity<List<Map<String, Object>>> getAvailableNodes() {
-        return ResponseEntity.ok(jobService.getAvailableNodes().stream()
-                .map(n -> Map.of("name", n.getNodeName(), "className", (Object) n.getClass().getSimpleName()))
-                .collect(Collectors.toList()));
-    }
-
-    // ==================== Task CRUD (delegated to TaskService) ====================
-
-    @GetMapping("/tasks")
-    public ResponseEntity<Map<String, Object>> listAllTasks(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return ResponseEntity.ok(taskService.getAllTasksPaged(page, size));
-    }
-
-    @GetMapping("/tasks/{taskId}")
-    public ResponseEntity<Task> getTask(@PathVariable UUID taskId) {
-        return taskService.getTask(taskId).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/tasks/{taskId}/logs")
-    public ResponseEntity<List<TaskNodeLog>> getTaskNodeLogs(@PathVariable UUID taskId) {
-        return ResponseEntity.ok(taskService.getTaskNodeLogs(taskId));
-    }
-
-    @GetMapping("/tasks/{taskId}/detail")
-    public ResponseEntity<Map<String, Object>> getTaskDetail(@PathVariable UUID taskId) {
-        return ResponseEntity.ok(taskService.getTaskDetail(taskId));
-    }
-
-    @DeleteMapping("/tasks/{taskId}")
-    public ResponseEntity<Void> deleteTask(@PathVariable UUID taskId,
-            @RequestParam(required = false, defaultValue = "false") boolean deleteAsset,
-            @RequestParam(required = false, defaultValue = "false") boolean deleteSourceFiles) {
-        taskService.deleteTask(taskId, deleteAsset, deleteSourceFiles);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/tasks/{taskId}/retry")
-    public ResponseEntity<Map<String, Object>> retryTask(@PathVariable UUID taskId) {
-        jobService.retryTask(taskId);
-        return ResponseEntity.ok(Map.of("taskId", taskId, "status", "RETRYING"));
     }
 }

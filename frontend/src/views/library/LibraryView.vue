@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAssetStore } from '../stores/asset'
+import { useAssetStore } from '../../stores/asset'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,7 +16,7 @@ const selectedCategories = ref<string[]>([])
 const selectedTags = ref<string[]>([])
 
 onMounted(async () => {
-  await assetStore.fetchAssets('COMPLETED')
+  await assetStore.fetchAssets()
   // Populate search from query
   if (route.query.q) {
     searchText.value = route.query.q as string

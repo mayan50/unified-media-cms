@@ -78,7 +78,7 @@ public class FileTaskExecutor {
         }
         List<PipelineNode> plan = new ArrayList<>();
         for (int i = (skipIdx >= 0 ? skipIdx + 1 : 0); i < sortedNodeIds.size(); i++) {
-            PipelineNode node = nodeMap.get(findNodeDef(graphNodes, sortedNodeIds.get(i)).get("name"));
+            PipelineNode node = nodeMap.get((String) findNodeDef(graphNodes, sortedNodeIds.get(i)).get("name"));
             if (node != null) plan.add(node);
         }
         return plan;
@@ -225,5 +225,17 @@ public class FileTaskExecutor {
             if (filePath.equals(tasks.get(i).getFilePath())) return tasks.get(i);
         }
         return Task.builder().jobId(jobId).filePath(filePath).build();
+    }
+
+    public TagRepository getTagRepository() {
+        return tagRepository;
+    }
+
+    public CategoryRepository getCategoryRepository() {
+        return categoryRepository;
+    }
+
+    public BookDetailRepository getBookDetailRepository() {
+        return bookDetailRepository;
     }
 }

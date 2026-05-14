@@ -1,7 +1,7 @@
 package com.unifiedmedia.cms.controller;
 
-import com.unifiedmedia.cms.dto.AssetUpdateRequest;
-import com.unifiedmedia.cms.entity.MediaAsset;
+import com.unifiedmedia.cms.dto.AssetUpdateFullRequest;
+import com.unifiedmedia.cms.entity.Asset;
 import com.unifiedmedia.cms.service.AssetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,11 +19,7 @@ public class AssetController {
     private final AssetService assetService;
 
     @GetMapping
-    public ResponseEntity<List<MediaAsset>> listAssets(
-            @RequestParam(required = false) String status) {
-        if ("COMPLETED".equals(status)) {
-            return ResponseEntity.ok(assetService.getCompletedAssets());
-        }
+    public ResponseEntity<List<Asset>> listAssets() {
         return ResponseEntity.ok(assetService.getAllAssets());
     }
 
@@ -33,13 +29,23 @@ public class AssetController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MediaAsset> updateAsset(
+    public ResponseEntity<Asset> updateAsset(
             @PathVariable UUID id,
-            @RequestBody AssetUpdateRequest request) {
-        MediaAsset updated = assetService.updateAsset(
-                id, request.getTitle(), request.getSummary(),
-                request.getPublishYear(), request.getCoverUrl()
-        );
+            @RequestBody Map<String, Object> request) {
+        Asset updated = assetService.updateAsset(id, request);
         return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/{id}/full")
+    public ResponseEntity<Map<String, Object>> updateAssetFull(
+            @PathVariable UUID id,
+            @RequestBody AssetUpdateFullRequest request) {
+        return ResponseEntity.ok(assetService.updateAssetFull(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAsset(@PathVariable UUID id) {
+        assetService.deleteAsset(id);
+        return ResponseEntity.noContent().build();
     }
 }

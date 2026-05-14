@@ -142,7 +142,7 @@ public class TaskService {
             if (deleteAsset) {
                 assetCreatorRepository.deleteByAssetId(task.getAssetId());
                 bookDetailRepository.findByAssetId(task.getAssetId())
-                        .ifPresent(bd -> bookDetailRepository.delete(bd));
+                        .ifPresent(bookDetailRepository::delete);
                 assetFileRepository.deleteByAssetId(task.getAssetId());
                 assetRepository.deleteById(task.getAssetId());
                 log.info("[TaskService] Deleted asset {} and related data", task.getAssetId());

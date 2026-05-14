@@ -1,6 +1,5 @@
 package com.unifiedmedia.cms.plugin;
 
-import com.unifiedmedia.cms.pipeline.core.PipelineNode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

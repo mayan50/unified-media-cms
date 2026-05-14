@@ -2,7 +2,6 @@ package com.unifiedmedia.cms.service;
 
 import com.unifiedmedia.cms.pipeline.core.ConfigFieldDef;
 import com.unifiedmedia.cms.pipeline.core.NodeType;
-import com.unifiedmedia.cms.pipeline.core.PipelineNode;
 import com.unifiedmedia.cms.plugin.NodeRegistry;
 import lombok.*;
 import lombok.experimental.Accessors;

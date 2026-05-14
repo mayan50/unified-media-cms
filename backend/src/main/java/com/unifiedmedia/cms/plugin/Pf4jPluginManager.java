@@ -14,10 +14,8 @@ import java.util.*;
  * PF4J 封装 — 只取 ClassLoader + 生命周期，不污染 PipelineNode 合约。
  */
 @Slf4j
-public class Pf4jPluginManager {
+public record Pf4jPluginManager(PluginManager pluginManager, NodeRegistry nodeRegistry) {
 
-    private final PluginManager pluginManager;
-    private final NodeRegistry nodeRegistry;
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
 
     public Pf4jPluginManager(Path pluginsDir, NodeRegistry nodeRegistry) {
@@ -25,16 +23,12 @@ public class Pf4jPluginManager {
     }
 
     public Pf4jPluginManager(Path pluginsDir, NodeRegistry nodeRegistry, ClassLoader parentClassLoader) {
-        this.pluginManager =  new DefaultPluginManager(pluginsDir);;
-        this.nodeRegistry = nodeRegistry;
+        this(new DefaultPluginManager(pluginsDir), nodeRegistry);
     }
 
-    public Pf4jPluginManager(PluginManager pluginManager, NodeRegistry nodeRegistry) {
-        this.pluginManager = pluginManager;
-        this.nodeRegistry = nodeRegistry;
-    }
-
-    /** 扫描并加载所有插件，返回新增的节点数 */
+    /**
+     * 扫描并加载所有插件，返回新增的节点数
+     */
     public int loadAllPlugins() {
         pluginManager.loadPlugins();
         // We don't use PF4J Plugin lifecycle — only ClassLoader
@@ -50,7 +44,9 @@ public class Pf4jPluginManager {
         return count;
     }
 
-    /** 热重载：卸载全部插件 → 重新加载 */
+    /**
+     * 热重载：卸载全部插件 → 重新加载
+     */
     public int reloadAllPlugins() {
         for (PluginWrapper w : pluginManager.getPlugins()) {
             nodeRegistry.unregisterPluginNodes(w.getPluginId());
@@ -59,7 +55,9 @@ public class Pf4jPluginManager {
         return loadAllPlugins();
     }
 
-    /** 加载单个插件的节点 */
+    /**
+     * 加载单个插件的节点
+     */
     @SuppressWarnings("unchecked")
     private int loadPluginNodes(PluginWrapper wrapper) throws Exception {
         ClassLoader pluginLoader = wrapper.getPluginClassLoader();
@@ -108,7 +106,4 @@ public class Pf4jPluginManager {
         return count;
     }
 
-    public void stop() {
-        // PF4J lifecycle not used — only ClassLoader
-    }
 }

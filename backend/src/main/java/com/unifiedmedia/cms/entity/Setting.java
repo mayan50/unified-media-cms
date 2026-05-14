@@ -40,7 +40,7 @@ public class Setting {
     @JsonProperty("settingValue")
     public Object getSettingValueParsed() {
         if (settingValue == null) return null;
-        try { return MAPPER.readValue(settingValue, new TypeReference<Object>() {}); }
+        try { return MAPPER.readValue(settingValue, new TypeReference<>() {}); }
         catch (Exception e) { return settingValue; }
     }
 

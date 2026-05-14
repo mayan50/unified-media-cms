@@ -75,26 +75,26 @@ public class BookDetail implements MediaDetail {
 
     // ==================== Smart Setters ====================
 
-    public void updateSubtitle(String v)           { if (v != null && !isLocked("subtitle")) this.subtitle = v; }
-    public void updatePublisher(String v)          { if (v != null && !isLocked("publisher")) this.publisher = v; }
-    public void updateLanguage(String v)           { if (v != null && !isLocked("language")) this.language = v; }
-    public void updateCompletionStatus(String v)   { if (v != null && !isLocked("completionStatus")) this.completionStatus = v; }
-    public void updateSeriesName(String v)         { if (v != null && !isLocked("seriesName")) this.seriesName = v; }
+    public void updateSubtitle(String v)           { if (v != null && isLocked("subtitle")) this.subtitle = v; }
+    public void updatePublisher(String v)          { if (v != null && isLocked("publisher")) this.publisher = v; }
+    public void updateLanguage(String v)           { if (v != null && isLocked("language")) this.language = v; }
+    public void updateCompletionStatus(String v)   { if (v != null && isLocked("completionStatus")) this.completionStatus = v; }
+    public void updateSeriesName(String v)         { if (v != null && isLocked("seriesName")) this.seriesName = v; }
 
-    public void updatePages(Integer v)             { if (v != null && !isLocked("pages")) this.pages = v; }
-    public void updateWordCount(Long v)            { if (v != null && !isLocked("wordCount")) this.wordCount = v; }
-    public void updateChapterCount(Integer v)      { if (v != null && !isLocked("chapterCount")) this.chapterCount = v; }
-    public void updateSeriesNumber(BigDecimal v)   { if (v != null && !isLocked("seriesNumber")) this.seriesNumber = v; }
-    public void updateTotalBooks(Integer v)        { if (v != null && !isLocked("totalBooks")) this.totalBooks = v; }
-    public void updateRating(BigDecimal v)         { if (v != null && !isLocked("rating")) this.rating = v; }
-    public void updatePublishedDate(LocalDate v)   { if (v != null && !isLocked("publishedDate")) this.publishedDate = v; }
+    public void updatePages(Integer v)             { if (v != null && isLocked("pages")) this.pages = v; }
+    public void updateWordCount(Long v)            { if (v != null && isLocked("wordCount")) this.wordCount = v; }
+    public void updateChapterCount(Integer v)      { if (v != null && isLocked("chapterCount")) this.chapterCount = v; }
+    public void updateSeriesNumber(BigDecimal v)   { if (v != null && isLocked("seriesNumber")) this.seriesNumber = v; }
+    public void updateTotalBooks(Integer v)        { if (v != null && isLocked("totalBooks")) this.totalBooks = v; }
+    public void updateRating(BigDecimal v)         { if (v != null && isLocked("rating")) this.rating = v; }
+    public void updatePublishedDate(LocalDate v)   { if (v != null && isLocked("publishedDate")) this.publishedDate = v; }
 
     public boolean isFieldLocked(String fieldName) {
         return lockedFields.contains(fieldName);
     }
 
     private boolean isLocked(String fieldName) {
-        return lockedFields.contains(fieldName);
+        return !lockedFields.contains(fieldName);
     }
 
     @PrePersist

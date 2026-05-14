@@ -1,158 +1,17 @@
--- Unified Media CMS - V1.0 DDL
+-- Unified Media CMS - DDL
 -- PostgreSQL
 
--- 1. 基础设施：存储节点表
+-- 1. 基础设施
+
 CREATE TABLE storage_nodes (
     id UUID PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    provider_type VARCHAR(50) NOT NULL,  -- 'LOCAL', 'MINIO', 'S3'
+    provider_type VARCHAR(50) NOT NULL,       -- LOCAL, MINIO, S3
     connection_config JSONB NOT NULL,
     is_readonly BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. 核心检索维度表 (一等公民)
-CREATE TABLE categories (
-    id UUID PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    media_type VARCHAR(50),  -- 'BOOK', 'VIDEO', null=通用
-    UNIQUE (name, media_type)
-);
-
-CREATE TABLE tags (
-    id UUID PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
-);
-
-CREATE TABLE creators (
-    id UUID PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL
-);
-
--- 3. 逻辑资产与物理文件表 (1:N)
-CREATE TABLE media_assets (
-    id UUID PRIMARY KEY,
-    library_id UUID NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    media_type VARCHAR(50) NOT NULL,     -- V1 强制为 'BOOK'
-    publish_year INTEGER,
-    cover_url TEXT,
-    summary TEXT,
-    status VARCHAR(50) NOT NULL,         -- 'PROCESSING', 'PENDING_MANUAL', 'COMPLETED'
-    tech_specs JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE media_files (
-    id UUID PRIMARY KEY,
-    asset_id UUID REFERENCES media_assets(id) ON DELETE CASCADE,
-    storage_node_id UUID REFERENCES storage_nodes(id) ON DELETE RESTRICT,
-    file_format VARCHAR(50) NOT NULL,    -- 'TXT', 'EPUB'
-    relative_path TEXT NOT NULL,
-    file_size BIGINT,
-    is_primary BOOLEAN DEFAULT true,
-    UNIQUE (storage_node_id, relative_path)
-);
-
--- 3.5 资产详情子表 (按 media_type 1:1)
-CREATE TABLE book_details (
-    id UUID PRIMARY KEY,
-    asset_id UUID UNIQUE REFERENCES media_assets(id) ON DELETE CASCADE,
-    subtitle VARCHAR(500),
-    publisher VARCHAR(200),
-    published_date VARCHAR(50),
-    language VARCHAR(50),
-    isbn_10 VARCHAR(20),
-    isbn_13 VARCHAR(20),
-    asin VARCHAR(20),
-    pages INTEGER,
-    series_name VARCHAR(300),
-    series_number DECIMAL(4,1),
-    total_books INTEGER,
-    douban_id VARCHAR(50),
-    extra_data JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 3.6 外部标识符 (1:N，跨类型共享)
-CREATE TABLE external_identifiers (
-    id UUID PRIMARY KEY,
-    asset_id UUID REFERENCES media_assets(id) ON DELETE CASCADE,
-    source VARCHAR(50) NOT NULL,     -- 'douban', 'goodreads', 'google', 'amazon', 'tmdb', 'imdb'
-    identifier VARCHAR(100) NOT NULL,
-    url TEXT,
-    UNIQUE (asset_id, source)
-);
-
--- 3.7 外部评分 (1:N，跨类型共享)
-CREATE TABLE external_ratings (
-    id UUID PRIMARY KEY,
-    asset_id UUID REFERENCES media_assets(id) ON DELETE CASCADE,
-    source VARCHAR(50) NOT NULL,     -- 'douban', 'goodreads', 'amazon', 'tmdb'
-    score DECIMAL(3,1),
-    count INTEGER,
-    UNIQUE (asset_id, source)
-);
-
--- 维度关联表
-CREATE TABLE asset_categories (
-    asset_id UUID,
-    category_id UUID,
-    PRIMARY KEY (asset_id, category_id)
-);
-
-CREATE TABLE asset_tags (
-    asset_id UUID,
-    tag_id UUID,
-    PRIMARY KEY (asset_id, tag_id)
-);
-
-CREATE TABLE asset_creators (
-    asset_id UUID,
-    creator_id UUID,
-    role VARCHAR(50),
-    PRIMARY KEY (asset_id, creator_id, role)
-);
-
--- 4. 状态机与留痕表
-CREATE TABLE pipeline_tasks (
-    id UUID PRIMARY KEY,
-    name VARCHAR(200),
-    asset_id UUID REFERENCES media_assets(id),
-    current_status VARCHAR(50) NOT NULL, -- 'QUEUED', 'RUNNING', 'PENDING_MANUAL', 'FAILED', 'COMPLETED'
-    template_id UUID REFERENCES pipeline_templates(id),
-    execution_graph JSONB,               -- 任务提交时从模板 graph_payload 快照
-    stuck_node_id VARCHAR(100),          -- 仲裁挂起时的节点实例 ID
-    task_context JSONB,                  -- 序列化的 TaskContext，启动时反序列化
-    input_storage_node_id UUID,
-    input_path_text TEXT,
-    output_storage_node_id UUID,
-    output_path_text TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE pipeline_task_logs (
-    id UUID PRIMARY KEY,
-    task_id UUID REFERENCES pipeline_tasks(id) ON DELETE CASCADE,
-    node_name VARCHAR(100) NOT NULL,
-    status VARCHAR(50) NOT NULL,         -- 'SUCCESS', 'SKIPPED', 'FAILED'
-    output_payload JSONB,
-    error_message TEXT,
-    execution_time_ms BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 流水线模板表 (动态装配，DAG 图)
-CREATE TABLE pipeline_templates (
-    id UUID PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT,
-    graph_payload JSONB NOT NULL,        -- DAG 图定义 {"nodes": [...], "edges": [...]}
-    is_default BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 全局设置表
 CREATE TABLE app_settings (
     id UUID PRIMARY KEY,
     setting_key VARCHAR(100) NOT NULL UNIQUE,
@@ -160,21 +19,194 @@ CREATE TABLE app_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 索引
-CREATE INDEX idx_media_assets_library ON media_assets(library_id);
-CREATE INDEX idx_media_assets_status ON media_assets(status);
-CREATE INDEX idx_media_assets_media_type ON media_assets(media_type);
-CREATE INDEX idx_media_files_asset ON media_files(asset_id);
-CREATE INDEX idx_pipeline_tasks_status ON pipeline_tasks(current_status);
-CREATE INDEX idx_pipeline_task_logs_task ON pipeline_task_logs(task_id);
-CREATE INDEX idx_pipeline_task_logs_created ON pipeline_task_logs(created_at);
+-- 2. 资产主表
 
--- 默认图书流水线模板 (DAG 图)
-INSERT INTO pipeline_templates (id, name, description, graph_payload, is_default, created_at)
+CREATE TABLE assets (
+    id UUID PRIMARY KEY,
+    title VARCHAR(500) NOT NULL,
+    media_type VARCHAR(50) NOT NULL,          -- BOOK, COMIC, VIDEO, UNKNOWN
+    publish_year INTEGER,
+    cover_url VARCHAR(2000),
+    summary TEXT,
+    locked_fields JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE asset_files (
+    id UUID PRIMARY KEY,
+    asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    storage_node_id UUID NOT NULL REFERENCES storage_nodes(id) ON DELETE RESTRICT,
+    file_format VARCHAR(50) NOT NULL,          -- TXT, EPUB, PDF, MP4
+    relative_path TEXT NOT NULL,
+    file_size BIGINT,
+    is_primary BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (storage_node_id, relative_path)
+);
+
+-- 3. 图书详情 (1:1)
+
+CREATE TABLE book_details (
+    id UUID PRIMARY KEY,
+    asset_id UUID UNIQUE REFERENCES assets(id) ON DELETE CASCADE,
+    subtitle VARCHAR(500),
+    publisher VARCHAR(200),
+    published_date DATE,
+    language VARCHAR(50),
+    pages INTEGER,
+    word_count BIGINT,
+    chapter_count INTEGER,
+    series_name VARCHAR(300),
+    series_number DECIMAL(4,1),
+    total_books INTEGER,
+    completion_status VARCHAR(20),             -- ongoing, completed
+    rating DECIMAL(3,1),
+    locked_fields JSONB DEFAULT '[]'::jsonb,
+    extra_data JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. 维度表
+
+CREATE TABLE creators (
+    id UUID PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE tags (
+    id UUID PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE categories (
+    id UUID PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    media_type VARCHAR(50),                    -- BOOK, COMIC, VIDEO, null=通用
+    UNIQUE (name, media_type)
+);
+
+CREATE TABLE languages (
+    id UUID PRIMARY KEY,
+    code VARCHAR(20) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL,
+    native_name VARCHAR(50),
+    short_name VARCHAR(20)
+);
+
+-- 5. 资产-维度关联
+
+CREATE TABLE asset_creators (
+    id UUID PRIMARY KEY,
+    asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    creator_id UUID NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    role VARCHAR(50) DEFAULT '作者',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (asset_id, creator_id, role)
+);
+
+CREATE TABLE asset_tags (
+    asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (asset_id, tag_id)
+);
+
+CREATE TABLE asset_categories (
+    asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    PRIMARY KEY (asset_id, category_id)
+);
+
+CREATE TABLE external_ids (
+    id UUID PRIMARY KEY,
+    asset_id UUID REFERENCES assets(id) ON DELETE CASCADE,
+    source VARCHAR(50) NOT NULL,               -- douban, isbn10, isbn13, asin
+    identifier VARCHAR(100) NOT NULL,
+    url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (asset_id, source)
+);
+
+-- 6. 管线模板
+
+CREATE TABLE templates (
+    id UUID PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    graph_payload JSONB NOT NULL,
+    is_default BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. 批处理作业
+
+CREATE TABLE batch_jobs (
+    id UUID PRIMARY KEY,
+    name VARCHAR(200),
+    template_id UUID REFERENCES templates(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',   -- PENDING, RUNNING, COMPLETED, FAILED
+    execution_graph JSONB NOT NULL,
+    input_storage_node_id UUID REFERENCES storage_nodes(id) ON DELETE SET NULL,
+    input_path TEXT,
+    output_storage_node_id UUID REFERENCES storage_nodes(id) ON DELETE SET NULL,
+    output_path TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. 文件任务
+
+CREATE TABLE tasks (
+    id UUID PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES batch_jobs(id) ON DELETE CASCADE,
+    file_path TEXT,
+    asset_id UUID REFERENCES assets(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',   -- PENDING, RUNNING, SUCCESS, FAILED, SKIPPED
+    last_completed_node VARCHAR(100),
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE task_node_logs (
+    id UUID PRIMARY KEY,
+    task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    node_name VARCHAR(100) NOT NULL,
+    node_label VARCHAR(100),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',   -- PENDING, RUNNING, SUCCESS, FAILED, SKIPPED
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
+    duration_ms BIGINT,
+    log_output TEXT,
+    error_message VARCHAR(2000),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. 索引
+
+CREATE INDEX idx_assets_media_type ON assets(media_type);
+CREATE INDEX idx_asset_files_asset ON asset_files(asset_id);
+CREATE INDEX idx_asset_files_storage ON asset_files(storage_node_id);
+CREATE INDEX idx_book_details_asset ON book_details(asset_id);
+CREATE INDEX idx_external_ids_asset ON external_ids(asset_id);
+CREATE INDEX idx_external_ids_source ON external_ids(source);
+CREATE INDEX idx_asset_creators_asset ON asset_creators(asset_id);
+CREATE INDEX idx_batch_jobs_status ON batch_jobs(status);
+CREATE INDEX idx_batch_jobs_template ON batch_jobs(template_id);
+CREATE INDEX idx_tasks_job ON tasks(job_id);
+CREATE INDEX idx_tasks_asset ON tasks(asset_id);
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_task_node_logs_task ON task_node_logs(task_id);
+
+-- 10. 默认模板
+
+INSERT INTO templates (id, name, description, graph_payload, is_default, created_at)
 VALUES (
     gen_random_uuid(),
     'default-book-pipeline',
-    '默认图书处理流水线：嗅探 → 提取 → AI分析 → 刮削 → 归档',
+    '默认图书处理流水线：嗅探 → 条件分支 → 提取/解析 → AI分析 → 刮削 → 转换 → 归档',
     '{
       "nodes": [
         {"id":"FileSnifferNode_0","name":"FileSnifferNode","label":"文件嗅探","icon":"🔍","config":{},"condition":""},

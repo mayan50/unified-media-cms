@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAllTasks } from '../api/modules'
+import { getTasks } from '../../api/modules'
 
 const router = useRouter()
 const viewMode = ref<'card' | 'table'>('card')
@@ -12,7 +12,7 @@ const page = ref(1); const totalItems = ref(0); const pageSize = 20
 async function fetchTasks() {
   loading.value = true
   try {
-    const { data } = await getAllTasks({ page: 1, size: 500, sort: 'createdAt,desc' })
+    const { data } = await getTasks({ page: 1, size: 500, sort: 'createdAt,desc' })
     allTasks.value = data.items || []
     totalItems.value = data.total || 0
   } finally { loading.value = false }
@@ -42,7 +42,7 @@ function fmt(d: string) { if (!d) return '-'; return new Date(d).toLocaleDateStr
     <v-progress-linear v-if="loading" indeterminate color="primary" />
 
     <div v-if="viewMode==='card'" class="tr-cards">
-      <div v-for="t in paged" :key="t.id" class="tr-card" @click="router.push(`/workshop/records/${t.id}`)">
+      <div v-for="t in paged" :key="t.id" class="tr-card" @click="router.push(`/workshop/tasks/${t.id}`)">
         <div class="tr-card-top"><span class="tr-name">{{ t.filePath?.split('/').pop() || '-' }}</span><span class="stb" :style="{ background: sc(t.status).color }">{{ sc(t.status).label }}</span></div>
         <div class="tr-meta"><span class="text-caption text-disabled">{{ fmt(t.createdAt) }}</span></div>
       </div>
@@ -51,7 +51,7 @@ function fmt(d: string) { if (!d) return '-'; return new Date(d).toLocaleDateStr
 
     <div v-else class="tr-table">
       <v-table density="compact" hover><thead><tr><th>文件</th><th>状态</th><th>时间</th></tr></thead>
-        <tbody><tr v-for="t in paged" :key="t.id" @click="router.push(`/workshop/records/${t.id}`)" style="cursor:pointer">
+        <tbody><tr v-for="t in paged" :key="t.id" @click="router.push(`/workshop/tasks/${t.id}`)" style="cursor:pointer">
           <td>{{ t.filePath?.split('/').pop() || '-' }}</td>
           <td><span class="stb" :style="{ background: sc(t.status).color }">{{ sc(t.status).label }}</span></td>
           <td class="text-caption">{{ fmt(t.createdAt) }}</td>

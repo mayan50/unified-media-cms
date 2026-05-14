@@ -6,14 +6,10 @@ import com.unifiedmedia.cms.pipeline.core.TaskContext;
 import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
 import com.unifiedmedia.cms.pipeline.spi.RelationMerger;
 import com.unifiedmedia.cms.repository.TagRepository;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
-@RequiredArgsConstructor
-public class TagRelationMerger implements RelationMerger {
-
-    private final TagRepository tagRepository;
+public record TagRelationMerger(TagRepository tagRepository) implements RelationMerger {
 
     @Override
     public void merge(TaskContext context, Asset asset) {

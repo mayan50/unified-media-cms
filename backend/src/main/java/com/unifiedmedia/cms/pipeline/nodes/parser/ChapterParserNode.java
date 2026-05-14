@@ -171,10 +171,7 @@ public class ChapterParserNode extends BaseProcessingNode {
             if (parts.length >= 2) {
                 String t = parts[0].trim();
                 String a = parts[1].trim();
-                // 第三段如果全是数字就当字数忽略
-                if (a.matches("\\d+万?") || a.matches("\\d+[千百万]?")) {
-                    // 第二部分是字数，不是作者
-                } else if (!a.isBlank() && !a.matches("\\d+")) {
+                if (!a.isBlank() && !a.matches("\\d+")) {
                     return new ParsedFilename(unifyQuiet(t, parts[0]), a);
                 }
                 return new ParsedFilename(unifyQuiet(t, parts[0]), null);
@@ -229,8 +226,7 @@ public class ChapterParserNode extends BaseProcessingNode {
         // 纯数字/字母或过短
         if (title.matches("^[a-zA-Z0-9_\\-.]+$") && title.length() <= 10) return true;
         // 随机字符串特征
-        if (title.matches("^[a-f0-9]{8,}$")) return true;
-        return false;
+        return title.matches("^[a-f0-9]{8,}$");
     }
 
     /** 从简介文本提取书名：《xxx》 */

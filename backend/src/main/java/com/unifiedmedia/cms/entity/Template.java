@@ -50,7 +50,7 @@ public class Template {
     @JsonProperty("graphPayload")
     public Object getGraphPayloadParsed() {
         if (graphPayload == null) return null;
-        try { return MAPPER.readValue(graphPayload, new TypeReference<Object>() {}); }
+        try { return MAPPER.readValue(graphPayload, new TypeReference<>() {}); }
         catch (Exception e) { return graphPayload; }
     }
 

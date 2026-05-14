@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useTaskStore } from '../../stores/task'
+import { useJobStore } from '../../stores/job'
 import { getStorageNodes, getJobs, getTemplates, createJob, startJob, continueJob, stopJob, resetJob, deleteJob, updateJob, getJobTasks } from '../../api/modules'
-import StoragePathSelector from './StoragePathSelector.vue'
+import StoragePathSelector from '../../components/StoragePathSelector.vue'
 import { useToast } from '../../composables/useToast'
 
 const { toast } = useToast()
-const taskStore = useTaskStore()
+const jobStore = useJobStore()
 const router = useRouter()
 
 // State
@@ -67,7 +67,7 @@ async function fetchJobs() {
     if (searchKeyword.value) params.search = searchKeyword.value
     if (filterStatus.value.length) params.status = filterStatus.value[0]
     const { data } = await getJobs(params)
-    taskStore.jobs = data.items || []
+    jobStore.jobs = data.items || []
     totalItems.value = data.total || 0
   } finally { loading.value = false }
 }
@@ -81,7 +81,7 @@ onMounted(async () => {
 
 function onSearch() { page.value = 1; fetchJobs() }
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / pageSize)))
-const pagedJobs = computed(() => taskStore.jobs || [])
+const pagedJobs = computed(() => jobStore.jobs || [])
 
 // New job
 const templateNeeds = computed(() => {
@@ -155,7 +155,7 @@ const tableHeaders = [
 
     <!-- Card View -->
     <div v-if="viewMode === 'card'" class="tc-cards">
-      <div v-for="job in pagedJobs" :key="job.id" class="task-card" @click="router.push(`/workshop/tasks/${job.id}`)">
+      <div v-for="job in pagedJobs" :key="job.id" class="task-card" @click="router.push(`/workshop/jobs/${job.id}`)">
         <div class="task-card-top">
           <div>
             <div class="task-card-name">{{ job.name || '未命名作业' }}</div>
@@ -179,7 +179,7 @@ const tableHeaders = [
 
     <!-- Table View -->
     <div v-else class="tc-table-wrap">
-      <v-data-table :items="pagedJobs" :headers="tableHeaders" hover density="compact" @click:row="(_, row: any) => router.push(`/workshop/tasks/${row.item.id}`)">
+      <v-data-table :items="pagedJobs" :headers="tableHeaders" hover density="compact" @click:row="(_, row: any) => router.push(`/workshop/jobs/${row.item.id}`)">
         <template #item.name="{ item }"><span class="fw-medium">{{ item.name || '未命名作业' }}</span></template>
         <template #item.status="{ item }"><span class="status-badge" :style="{ color: sc(item.status).color, background: sc(item.status).bg }">{{ sc(item.status).label }}</span></template>
         <template #item.createdAt="{ item }"><span class="text-caption">{{ formatTime(item.createdAt) }}</span></template>

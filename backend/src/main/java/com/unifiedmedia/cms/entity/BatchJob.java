@@ -65,7 +65,7 @@ public class BatchJob {
     @JsonProperty("executionGraph")
     public Object getExecutionGraphParsed() {
         if (executionGraph == null) return null;
-        try { return MAPPER.readValue(executionGraph, new TypeReference<Object>() {}); }
+        try { return MAPPER.readValue(executionGraph, new TypeReference<>() {}); }
         catch (Exception e) { return executionGraph; }
     }
 

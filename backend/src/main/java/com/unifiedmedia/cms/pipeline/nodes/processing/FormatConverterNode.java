@@ -63,15 +63,7 @@ public class FormatConverterNode extends BaseProcessingNode {
 
     private byte[] createEpub(String title, String author, String content, List<ChapterInfo> chapters) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ZipOutputStream zos = new ZipOutputStream(baos);
-
-        // mimetype
-        ZipEntry mimetypeEntry = new ZipEntry("mimetype");
-        mimetypeEntry.setMethod(ZipEntry.STORED);
-        byte[] mtBytes = "application/epub+zip".getBytes(StandardCharsets.UTF_8);
-        mimetypeEntry.setSize(mtBytes.length); mimetypeEntry.setCompressedSize(mtBytes.length);
-        CRC32 crc = new CRC32(); crc.update(mtBytes); mimetypeEntry.setCrc(crc.getValue());
-        zos.putNextEntry(mimetypeEntry); zos.write(mtBytes); zos.closeEntry();
+        ZipOutputStream zos = getZipOutputStream(baos);
 
         // container.xml
         writeZip(zos, "META-INF/container.xml",
@@ -106,14 +98,32 @@ public class FormatConverterNode extends BaseProcessingNode {
         // content.opf
         writeZip(zos, "OEBPS/content.opf",
                 String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><package xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"BookId\" version=\"3.0\"><metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:identifier id=\"BookId\">urn:uuid:%s</dc:identifier><dc:title>%s</dc:title><dc:creator>%s</dc:creator><dc:language>zh</dc:language></metadata><manifest>%s</manifest><spine>%s</spine></package>",
-                        UUID.randomUUID(), esc(title), esc(author), manifest.toString(), spine.toString()));
+                        UUID.randomUUID(), esc(title), esc(author), manifest, spine));
 
         // nav.xhtml
         writeZip(zos, "OEBPS/nav.xhtml",
-                String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\"><head><title>TOC</title></head><body>%s</body></html>", nav.toString()));
+                String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\"><head><title>TOC</title></head><body>%s</body></html>", nav));
 
         zos.finish(); zos.close();
         return baos.toByteArray();
+    }
+
+    private static ZipOutputStream getZipOutputStream(ByteArrayOutputStream baos) throws IOException {
+        ZipOutputStream zos = new ZipOutputStream(baos);
+
+        // mimetype
+        ZipEntry mimetypeEntry = new ZipEntry("mimetype");
+        mimetypeEntry.setMethod(ZipEntry.STORED);
+        byte[] mtBytes = "application/epub+zip".getBytes(StandardCharsets.UTF_8);
+        mimetypeEntry.setSize(mtBytes.length);
+        mimetypeEntry.setCompressedSize(mtBytes.length);
+        CRC32 crc = new CRC32();
+        crc.update(mtBytes);
+        mimetypeEntry.setCrc(crc.getValue());
+        zos.putNextEntry(mimetypeEntry);
+        zos.write(mtBytes);
+        zos.closeEntry();
+        return zos;
     }
 
     private List<ChapterPart> splitChapters(String content, List<ChapterInfo> chapters) {
@@ -166,7 +176,7 @@ public class FormatConverterNode extends BaseProcessingNode {
     }
 
     private static class ChapterPart {
-        String title;
+        final String title;
         String body;
         ChapterPart(String t, String b) { title = t; body = b; }
     }

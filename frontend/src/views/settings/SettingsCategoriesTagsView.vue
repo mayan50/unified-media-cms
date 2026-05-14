@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getCategories, getTags, createCategory, updateCategory, deleteCategory, createTag, updateTag, deleteTag } from '../api/modules'
+import { getCategories, getTags, createCategory, updateCategory, deleteCategory, createTag, updateTag, deleteTag } from '../../api/modules'
 
 const categories = ref<any[]>([])
 const tags = ref<any[]>([])

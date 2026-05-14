@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getTaskDetail, getJob, getJobTasks, retryTask, deleteTask, updateAssetFull, getLanguages, getCreators, getCategories, getTags, createTag, createCategory } from '../api/modules'
-import NodeLogTimeline, { type NodeLogEntry } from '../components/workshop/NodeLogTimeline.vue'
+import { getTaskDetail, getJob, getJobTasks, retryTask, deleteTask, updateAssetFull, getLanguages, getCreators, getCategories, getTags, createTag, createCategory } from '../../api/modules'
+import NodeLogTimeline, { type NodeLogEntry } from '../../components/NodeLogTimeline.vue'
 import { Client } from '@stomp/stompjs'
 const route = useRoute()
 const router = useRouter()
@@ -153,30 +153,31 @@ async function saveEdit() {
 
     // Deduplicate by name+role
     const seen = new Set<string>()
-    const creators: {name:string,role:string}[] = []
+    const creatorList: {name:string,role:string}[] = []
     for (const name of editAuthors.value) {
       const n = name.trim(); if (!n) continue
-      if (!seen.has(n + '|作者')) { seen.add(n + '|作者'); creators.push({ name: n, role: '作者' }) }
+      if (!seen.has(n + '|作者')) { seen.add(n + '|作者'); creatorList.push({ name: n, role: '作者' }) }
     }
     for (const name of editTranslators.value) {
       const n = name.trim(); if (!n) continue
-      if (!seen.has(n + '|译者')) { seen.add(n + '|译者'); creators.push({ name: n, role: '译者' }) }
+      if (!seen.has(n + '|译者')) { seen.add(n + '|译者'); creatorList.push({ name: n, role: '译者' }) }
     }
-    const extIds = editExternalIds.value.filter(x => x.source && x.identifier).map(x => ({ source: x.source, identifier: x.identifier }))
+    const extIdList = editExternalIds.value.filter(x => x.source && x.identifier).map(x => ({ source: x.source, identifier: x.identifier }))
     const payload = {
       ...editForm.value,
       tagIds,
       categoryIds: catIds,
-      creators,
-      externalIds: extIds,
+      creators: creatorList,
+      externalIds: extIdList,
       lockedFields: JSON.stringify([...editLocked.value]),
     }
     await updateAssetFull(task.value.assetId, payload)
     editDialog.value = false
-    // Reload to get fresh data
     const { data } = await getTaskDetail(id)
     task.value = data.task; asset.value = data.asset; bookDetail.value = data.bookDetail
     creators.value = data.creators || []; externalIds.value = data.externalIds || []
+    currentTags.value = (data.tags || []).map((t: any) => t.name)
+    currentCategories.value = (data.categories || []).map((c: any) => c.name)
     nodeLogs.value = data.nodeLogs || []; showToast('保存成功')
   } catch { showToast('保存失败', 'error') }
   finally { editSaving.value = false }
@@ -199,7 +200,7 @@ async function doDelete() {
   try {
     await deleteTask(id, deleteAssetOpt.value, deleteSourceOpt.value)
     showToast('删除成功')
-    setTimeout(() => router.push('/workshop/records'), 800)
+    setTimeout(() => router.push('/workshop/tasks'), 800)
   } catch { showToast('删除失败', 'error'); deleting.value = false }
 }
 
@@ -333,7 +334,7 @@ onUnmounted(() => { stompClient?.deactivate() })
 <template>
   <div class="rd-page">
     <div class="rd-top">
-      <v-btn icon="mdi-arrow-left" size="small" variant="plain" @click="router.push('/workshop/records')" />
+      <v-btn icon="mdi-arrow-left" size="small" variant="plain" @click="router.push('/workshop/tasks')" />
       <span class="text-caption text-disabled ml-2">任务记录</span>
     </div>
 
@@ -456,7 +457,7 @@ onUnmounted(() => { stompClient?.deactivate() })
             <div class="rd-card-title">同作业其他文件 ({{ relatedTasks.length }})</div>
             <div class="rd-related">
               <div v-for="rt in relatedTasks" :key="rt.id" class="rd-rel-item"
-                @click="router.push(`/workshop/records/${rt.id}`)">
+                @click="router.push(`/workshop/tasks/${rt.id}`)">
                 <v-icon icon="mdi-file-document-outline" size="18" color="secondary" />
                 <span class="rd-rel-name">{{ rt.filePath?.split('/').pop() || '-' }}</span>
                 <span class="stb" :style="{ background: sts(rt.status).color }">{{ sts(rt.status).label }}</span>

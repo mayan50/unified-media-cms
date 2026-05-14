@@ -36,7 +36,7 @@ public class StandardTaskContext implements TaskContext {
         this.taskId = taskId;
         this.asset = asset;
         this.detail = detail;
-        this.globalData = globalData != null ? Collections.unmodifiableMap(new HashMap<>(globalData)) : Map.of();
+        this.globalData = globalData != null ? Map.copyOf(globalData) : Map.of();
     }
 
     @Override

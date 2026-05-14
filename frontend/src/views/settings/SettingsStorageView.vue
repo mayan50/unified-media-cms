@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getStorageNodes, createStorageNode, updateStorageNode, deleteStorageNode } from '../api/modules'
-import { useToast } from '../composables/useToast'
+import { getStorageNodes, createStorageNode, updateStorageNode, deleteStorageNode } from '../../api/modules'
+import { useToast } from '../../composables/useToast'
 
 const { toast } = useToast()
 
