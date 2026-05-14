@@ -79,3 +79,13 @@
 
 /* 视图切换按钮组 */
 .view-toggle { display: flex; border-radius: 8px; background: rgb(var(--v-theme-surface-variant)); padding: 2px; }
+
+/* 分页条 */
+.page-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  border-top: 1px solid rgb(var(--v-border-color));
+  background: rgb(var(--v-theme-surface));
+}

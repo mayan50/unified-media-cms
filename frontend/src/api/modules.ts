@@ -29,6 +29,7 @@ export const stopJob = (id: string) => api.post(`/jobs/${id}/stop`)
 export const resetJob = (id: string) => api.post(`/jobs/${id}/reset`)
 export const updateJob = (id: string, data: any) => api.put(`/jobs/${id}`, data)
 export const deleteJob = (id: string, params?: any) => api.delete(`/jobs/${id}`, { params })
+export const getJobPendingCount = () => api.get('/jobs/count')
 
 // === Tasks ===
 export const getJobTasks = (jobId: string, page = 1, size = 50) => api.get(`/jobs/${jobId}/tasks`, { params: { page, size } })

@@ -61,6 +61,11 @@ public class BatchJobController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/count")
+    public ResponseEntity<Map<String, Object>> getPendingCount() {
+        return ResponseEntity.ok(jobService.getPendingCount());
+    }
+
     @GetMapping
     public ResponseEntity<Map<String, Object>> listJobs(
             @RequestParam(defaultValue = "1") int page,

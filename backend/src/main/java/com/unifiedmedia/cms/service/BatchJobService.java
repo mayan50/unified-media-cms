@@ -391,6 +391,12 @@ public class BatchJobService {
         return Map.of("items", pageItems, "total", total, "page", page, "size", size);
     }
 
+    public Map<String, Object> getPendingCount() {
+        long failed = jobRepository.findAll().stream().filter(j -> "FAILED".equals(j.getStatus())).count();
+        long pending = jobRepository.findAll().stream().filter(j -> "PENDING".equals(j.getStatus()) || "QUEUED".equals(j.getStatus())).count();
+        return Map.of("failed", failed, "pending", pending, "total", failed + pending);
+    }
+
     public Optional<BatchJob> getJob(UUID id) { return jobRepository.findById(id); }
     public List<PipelineNode> getAvailableNodes() { return List.copyOf(nodeRegistry.getNodes()); }
 }

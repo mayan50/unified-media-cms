@@ -23,8 +23,11 @@ public class TaskController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> listAllTasks(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return ResponseEntity.ok(taskService.getAllTasksPaged(page, size));
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        return ResponseEntity.ok(taskService.getAllTasksPaged(page, size, search, status));
     }
 
     @GetMapping("/{taskId}")

@@ -138,33 +138,36 @@ const tableHeaders = [
 </script>
 
 <template>
-  <div class="task-center">
-    <div class="tc-toolbar">
-      <div class="tc-toolbar-left">
-        <div class="view-toggle mr-3">
+  <div class="page-view">
+    <div class="page-toolbar">
+      <div class="page-toolbar-left">
+        <h3>作业看板</h3>
+        <div class="view-toggle ml-3">
           <v-btn icon="mdi-view-grid" size="small" :variant="viewMode === 'card' ? 'tonal' : 'plain'" :color="viewMode === 'card' ? 'primary' : undefined" @click="viewMode = 'card'" />
           <v-btn icon="mdi-view-list" size="small" :variant="viewMode === 'table' ? 'tonal' : 'plain'" :color="viewMode === 'table' ? 'primary' : undefined" @click="viewMode = 'table'" />
         </div>
         <v-text-field v-model="searchKeyword" placeholder="搜索作业名称" prepend-inner-icon="mdi-magnify" density="compact" hide-details clearable style="width:200px" @keyup.enter="onSearch" @click:clear="onSearch" />
         <v-select v-model="filterStatus" :items="statusItems" multiple chips placeholder="状态" density="compact" hide-details clearable style="width:160px" @update:model-value="onSearch" />
       </div>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="newTaskDialogVisible = true">新建作业</v-btn>
+      <div class="page-toolbar-right">
+        <v-btn color="primary" prepend-icon="mdi-plus" @click="newTaskDialogVisible = true">新建作业</v-btn>
+      </div>
     </div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" />
 
     <!-- Card View -->
-    <div v-if="viewMode === 'card'" class="tc-cards">
-      <div v-for="job in pagedJobs" :key="job.id" class="task-card" @click="router.push(`/workshop/jobs/${job.id}`)">
-        <div class="task-card-top">
+    <div v-if="viewMode === 'card'" class="page-cards">
+      <div v-for="job in pagedJobs" :key="job.id" class="page-card job-card" @click="router.push(`/workshop/jobs/${job.id}`)">
+        <div class="page-card-top">
           <div>
-            <div class="task-card-name">{{ job.name || '未命名作业' }}</div>
-            <code class="task-card-subtitle">{{ job.id?.substring(0, 8) }}</code>
+            <div class="page-card-name">{{ job.name || '未命名作业' }}</div>
+            <code class="job-card-id">{{ job.id?.substring(0, 8) }}</code>
           </div>
           <span class="status-badge" :style="{ color: sc(job.status).color, background: sc(job.status).bg }">{{ sc(job.status).label }}</span>
         </div>
-        <div class="task-card-meta"><span>{{ formatTime(job.createdAt) }}</span></div>
-        <div class="task-card-actions" @click.stop>
+        <div class="job-card-meta"><span>{{ formatTime(job.createdAt) }}</span></div>
+        <div class="job-card-actions" @click.stop>
           <v-btn v-if="job.status !== 'RUNNING'" icon="mdi-pencil" size="x-small" variant="tonal" color="primary" @click="openEditDialog(job)" title="修改" />
           <v-btn v-if="job.status === 'PENDING' || job.status === 'QUEUED'" icon="mdi-play" size="x-small" variant="tonal" color="success" @click="handleStart(job.id)" title="执行" />
           <v-btn v-if="job.status === 'RUNNING'" icon="mdi-play-circle" size="x-small" variant="tonal" color="info" @click="handleContinue(job.id)" title="继续" />
@@ -174,29 +177,31 @@ const tableHeaders = [
           <v-btn v-if="job.status !== 'RUNNING'" icon="mdi-delete" size="x-small" variant="tonal" color="error" @click="openDeleteDialog(job.id)" title="删除" />
         </div>
       </div>
-      <div v-if="!pagedJobs.length" class="tc-empty">暂无作业</div>
+      <div v-if="!pagedJobs.length && !loading" class="text-caption text-disabled text-center py-10" style="grid-column:1/-1">暂无作业</div>
     </div>
 
     <!-- Table View -->
-    <div v-else class="tc-table-wrap">
-      <v-data-table :items="pagedJobs" :headers="tableHeaders" hover density="compact" @click:row="(_, row: any) => router.push(`/workshop/jobs/${row.item.id}`)">
-        <template #item.name="{ item }"><span class="fw-medium">{{ item.name || '未命名作业' }}</span></template>
-        <template #item.status="{ item }"><span class="status-badge" :style="{ color: sc(item.status).color, background: sc(item.status).bg }">{{ sc(item.status).label }}</span></template>
-        <template #item.createdAt="{ item }"><span class="text-caption">{{ formatTime(item.createdAt) }}</span></template>
-        <template #item.actions="{ item }">
-          <div class="d-flex ga-1" @click.stop>
-            <v-btn v-if="item.status !== 'RUNNING'" icon="mdi-pencil" size="x-small" variant="plain" color="primary" @click="openEditDialog(item)" title="修改" />
-            <v-btn v-if="item.status === 'PENDING' || item.status === 'QUEUED'" icon="mdi-play" size="x-small" variant="plain" color="success" @click="handleStart(item.id)" title="执行" />
-            <v-btn v-if="item.status === 'RUNNING'" icon="mdi-stop" size="x-small" variant="plain" color="error" @click="handleStop(item.id)" title="终止" />
-            <v-btn v-if="item.status === 'COMPLETED' || item.status === 'FAILED'" icon="mdi-refresh" size="x-small" variant="plain" color="success" @click="handleStart(item.id)" title="重跑" />
-            <v-btn v-if="item.status !== 'RUNNING'" icon="mdi-delete" size="x-small" variant="plain" color="error" @click="openDeleteDialog(item.id)" title="删除" />
-          </div>
-        </template>
-      </v-data-table>
+    <div v-else class="page-body">
+      <div class="page-table-wrap">
+        <v-data-table :items="pagedJobs" :headers="tableHeaders" hover density="compact" @click:row="(_, row: any) => router.push(`/workshop/jobs/${row.item.id}`)">
+          <template #item.name="{ item }"><span class="fw-medium">{{ item.name || '未命名作业' }}</span></template>
+          <template #item.status="{ item }"><span class="status-badge" :style="{ color: sc(item.status).color, background: sc(item.status).bg }">{{ sc(item.status).label }}</span></template>
+          <template #item.createdAt="{ item }"><span class="text-caption">{{ formatTime(item.createdAt) }}</span></template>
+          <template #item.actions="{ item }">
+            <div class="d-flex ga-1" @click.stop>
+              <v-btn v-if="item.status !== 'RUNNING'" icon="mdi-pencil" size="x-small" variant="plain" color="primary" @click="openEditDialog(item)" title="修改" />
+              <v-btn v-if="item.status === 'PENDING' || item.status === 'QUEUED'" icon="mdi-play" size="x-small" variant="plain" color="success" @click="handleStart(item.id)" title="执行" />
+              <v-btn v-if="item.status === 'RUNNING'" icon="mdi-stop" size="x-small" variant="plain" color="error" @click="handleStop(item.id)" title="终止" />
+              <v-btn v-if="item.status === 'COMPLETED' || item.status === 'FAILED'" icon="mdi-refresh" size="x-small" variant="plain" color="success" @click="handleStart(item.id)" title="重跑" />
+              <v-btn v-if="item.status !== 'RUNNING'" icon="mdi-delete" size="x-small" variant="plain" color="error" @click="openDeleteDialog(item.id)" title="删除" />
+            </div>
+          </template>
+        </v-data-table>
+      </div>
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="tc-pagination">
+    <div v-if="totalPages > 1" class="page-pager">
       <v-btn icon="mdi-chevron-left" size="small" variant="plain" :disabled="page <= 1" @click="page--; fetchJobs()" />
       <span class="text-caption mx-2">{{ page }} / {{ totalPages }} ({{ totalItems }}项)</span>
       <v-btn icon="mdi-chevron-right" size="small" variant="plain" :disabled="page >= totalPages" @click="page++; fetchJobs()" />
@@ -238,20 +243,11 @@ const tableHeaders = [
 </template>
 
 <style scoped>
-.task-center { height: 100%; display: flex; flex-direction: column; }
-.tc-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid rgb(var(--v-border-color)); background: rgb(var(--v-theme-surface)); }
-.tc-toolbar-left { display: flex; gap: 8px; align-items: center; }
-.tc-cards { flex: 1; overflow: auto; padding: 12px 20px 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; align-content: start; }
-.task-card { background: rgb(var(--v-theme-surface)); border: 1px solid rgb(var(--v-border-color)); border-radius: 10px; padding: 14px; cursor: pointer; transition: border-color .15s; display: flex; flex-direction: column; gap: 10px; }
-.task-card:hover { border-color: rgb(var(--v-theme-primary)); }
-.task-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.task-card-name { font-size: 14px; font-weight: 600; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-card-subtitle { font-size: 10px; color: rgb(var(--v-theme-secondary)); font-family: 'JetBrains Mono', monospace; }
-.task-card-meta { font-size: 12px; color: rgb(var(--v-theme-secondary)); }
-.task-card-actions { display: flex; gap: 4px; justify-content: flex-end; padding-top: 6px; border-top: 1px solid rgb(var(--v-border-color)); }
-.tc-empty { grid-column: 1 / -1; text-align: center; padding: 60px 0; color: rgb(var(--v-theme-secondary)); font-size: 14px; }
-.tc-table-wrap { flex: 1; overflow: auto; padding: 0 20px 20px; }
-.tc-pagination { display: flex; justify-content: center; align-items: center; padding: 8px; border-top: 1px solid rgb(var(--v-border-color)); background: rgb(var(--v-theme-surface)); }
+.job-card { cursor: pointer; transition: border-color .15s; display: flex; flex-direction: column; gap: 10px; }
+.job-card:hover { border-color: rgb(var(--v-theme-primary)); }
+.job-card-id { font-size: 10px; color: rgb(var(--v-theme-secondary)); font-family: 'JetBrains Mono', monospace; }
+.job-card-meta { font-size: 12px; color: rgb(var(--v-theme-secondary)); }
+.job-card-actions { display: flex; gap: 4px; justify-content: flex-end; padding-top: 6px; border-top: 1px solid rgb(var(--v-border-color)); }
 .status-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
 .fw-medium { font-weight: 500; }
 </style>

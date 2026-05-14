@@ -37,8 +37,15 @@ public class TaskService {
         return taskNodeLogRepository.findByTaskIdOrderByStartTimeAsc(taskId);
     }
 
-    public Map<String, Object> getAllTasksPaged(int page, int size) {
-        var all = taskRepository.findAllByOrderByCreatedAtDesc();
+    public Map<String, Object> getAllTasksPaged(int page, int size, String search, String status) {
+        var stream = taskRepository.findAllByOrderByCreatedAtDesc().stream();
+        if (search != null && !search.isBlank()) {
+            stream = stream.filter(t -> t.getFilePath() != null && t.getFilePath().contains(search));
+        }
+        if (status != null && !status.isBlank()) {
+            stream = stream.filter(t -> status.equals(t.getStatus()));
+        }
+        var all = stream.toList();
         int total = all.size();
         int from = (page - 1) * size, to = Math.min(from + size, total);
         return Map.of("items", from < total ? all.subList(from, to) : List.of(), "total", total, "page", page, "size", size);

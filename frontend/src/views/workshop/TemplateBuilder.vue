@@ -56,6 +56,14 @@ const loading = ref(false)
 const editorVisible = ref(false)
 const editId = ref<string | null>(null)
 const editName = ref('')
+const viewMode = ref<'card' | 'table'>('card')
+const searchKeyword = ref('')
+
+const filteredTemplates = computed(() => {
+  if (!searchKeyword.value) return templates.value
+  const q = searchKeyword.value.toLowerCase()
+  return templates.value.filter((t: any) => (t.name || '').toLowerCase().includes(q))
+})
 const editDesc = ref('')
 
 const openCategories = ref<Set<string>>(new Set(['input', 'processing', 'output', 'flow_control']))
@@ -400,15 +408,26 @@ function openEditTemplate(tpl: any) {
     <!-- Template List -->
     <template v-if="!editorVisible">
       <div class="page-toolbar">
-        <h3>处理模板</h3>
-        <v-btn color="primary" size="default" prepend-icon="mdi-plus" @click="openNewTemplate">新建模板</v-btn>
+        <div class="page-toolbar-left">
+          <h3>模版编排</h3>
+          <div class="view-toggle ml-3">
+            <v-btn icon="mdi-view-grid" size="small" :variant="viewMode==='card'?'tonal':'plain'" :color="viewMode==='card'?'primary':undefined" @click="viewMode='card'" />
+            <v-btn icon="mdi-view-list" size="small" :variant="viewMode==='table'?'tonal':'plain'" :color="viewMode==='table'?'primary':undefined" @click="viewMode='table'" />
+          </div>
+          <v-text-field v-model="searchKeyword" placeholder="搜索模板名称" prepend-inner-icon="mdi-magnify" density="compact" hide-details clearable style="width:200px" />
+        </div>
+        <div class="page-toolbar-right">
+          <v-btn color="primary" prepend-icon="mdi-plus" @click="openNewTemplate">新建模板</v-btn>
+        </div>
       </div>
-      <div class="page-body">
-        <div class="page-cards">
-        <v-progress-circular v-if="loading" indeterminate color="primary" class="ma-auto" />
-        <div v-for="tpl in templates" :key="tpl.id" class="page-card tpl-card" @click="openEditTemplate(tpl)">
-          <div class="page-card-top tpl-card-header">
-            <span class="tpl-name">{{ tpl.name }}</span>
+
+      <v-progress-linear v-if="loading" indeterminate color="primary" />
+
+      <!-- Card View -->
+      <div v-if="viewMode==='card'" class="page-cards">
+        <div v-for="tpl in filteredTemplates" :key="tpl.id" class="page-card tpl-card" @click="openEditTemplate(tpl)">
+          <div class="page-card-top">
+            <span class="page-card-name">{{ tpl.name }}</span>
             <v-chip v-if="tpl.isDefault" size="x-small" color="success" variant="tonal">默认</v-chip>
           </div>
           <div class="tpl-card-desc">{{ tpl.description || '无描述' }}</div>
@@ -425,10 +444,23 @@ function openEditTemplate(tpl: any) {
             </v-chip>
           </div>
         </div>
-        <div v-if="!templates.length && !loading" class="tpl-empty">
-          <div class="text-caption text-disabled text-center py-10">暂无模板，点击新建开始</div>
+        <div v-if="!filteredTemplates.length && !loading" class="text-caption text-disabled text-center py-10" style="grid-column:1/-1">暂无模板，点击新建开始</div>
+      </div>
+
+      <!-- Table View -->
+      <div v-else class="page-body">
+        <div class="page-table-wrap">
+          <v-table density="compact" hover>
+            <thead><tr><th>模板名称</th><th>描述</th><th>节点数</th><th>默认</th></tr></thead>
+            <tbody><tr v-for="tpl in filteredTemplates" :key="tpl.id" @click="openEditTemplate(tpl)" style="cursor:pointer">
+              <td class="fw-medium">{{ tpl.name }}</td>
+              <td class="text-caption text-disabled">{{ tpl.description || '-' }}</td>
+              <td class="text-caption">{{ tpl.graphPayload?.nodes?.length || 0 }}</td>
+              <td><v-chip v-if="tpl.isDefault" size="x-small" color="success" variant="tonal">默认</v-chip><span v-else class="text-caption text-disabled">-</span></td>
+            </tr></tbody>
+          </v-table>
         </div>
-        </div>
+        <div v-if="!filteredTemplates.length && !loading" class="text-caption text-disabled text-center py-10">暂无模板，点击新建开始</div>
       </div>
     </template>
 
@@ -561,19 +593,12 @@ function openEditTemplate(tpl: any) {
 
 <style scoped>
 /* Template card overrides */
-.tpl-card {
-  padding: 14px;
-  cursor: pointer;
-  transition: border-color 0.15s;
-  background: rgb(var(--v-theme-surface-variant));
-}
+.tpl-card { cursor: pointer; transition: border-color 0.15s; background: rgb(var(--v-theme-surface-variant)); }
 .tpl-card:hover { border-color: rgb(var(--v-theme-primary)); }
-.tpl-card-header { margin-bottom: 6px; }
-.tpl-name { flex: 1; }
 .tpl-card-desc { font-size: 12px; color: rgb(var(--v-theme-secondary)); margin-bottom: 10px; }
 .tpl-card-nodes { display: flex; flex-wrap: wrap; gap: 4px; }
 .tpl-node-chip { cursor: inherit !important; }
-.tpl-empty { grid-column: 1 / -1; padding: 40px 0; }
+.fw-medium { font-weight: 500; }
 
 .flow-editor { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .flow-topbar {

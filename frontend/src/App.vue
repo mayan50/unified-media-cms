@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useJobStore } from './stores/job'
 import { useThemeStore } from './stores/theme'
-import { getStorageNodes } from './api/modules'
+import { getStorageNodes, getJobPendingCount } from './api/modules'
 import ToastProvider from './components/ToastProvider.vue'
 
 const router = useRouter()
 const route = useRoute()
-const jobStore = useJobStore()
 const themeStore = useThemeStore()
 
 const sidebarCollapsed = ref(false)
@@ -27,10 +25,8 @@ async function loadSidebarData() {
 
 async function loadPendingCount() {
   try {
-    await jobStore.fetchJobs()
-    pendingCount.value = jobStore.jobs.filter(
-      (t: any) => t.currentStatus === 'PENDING_MANUAL' || t.currentStatus === 'FAILED'
-    ).length
+    const { data } = await getJobPendingCount()
+    pendingCount.value = data.total || 0
   } catch { /* */ }
 }
 
