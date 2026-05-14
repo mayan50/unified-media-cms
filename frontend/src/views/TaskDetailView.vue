@@ -1,141 +1,331 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getTaskLogs } from '../api/modules'
-import { useTaskStore } from '../stores/task'
-
+import { getJob, getJobTasks, startJob, stopJob, resetJob, deleteJob, retryTask } from '../api/modules'
+import { Client } from '@stomp/stompjs'
 const route = useRoute()
 const router = useRouter()
-const taskStore = useTaskStore()
+const jobId = route.params.id as string
 
-const taskId = route.params.id as string
-const logs = ref<any[]>([])
+let stompClient: Client | null = null
+
+const job = ref<any>(null)
+const tasks = ref<any[]>([])
 const loading = ref(true)
+const actionLoading = ref('')
+const totalTasks = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(20)
+const searchQuery = ref('')
+const statusFilter = ref('')
 
-onMounted(async () => {
-  await taskStore.fetchTasks()
+const statusList = [
+  { title: '全部', value: '' },
+  { title: '待执行', value: 'PENDING' },
+  { title: '执行中', value: 'RUNNING' },
+  { title: '成功', value: 'SUCCESS' },
+  { title: '失败', value: 'FAILED' },
+  { title: '跳过', value: 'SKIPPED' },
+]
+
+const CFG: Record<string, { label: string; color: string }> = {
+  PENDING:  { label: '待执行', color: '#8e92a8' },
+  RUNNING:  { label: '执行中', color: '#5b8def' },
+  COMPLETED: { label: '已完成', color: '#3dd68c' },
+  FAILED:   { label: '失败', color: '#f06580' },
+  SUCCESS:  { label: '成功', color: '#3dd68c' },
+  SKIPPED:  { label: '跳过', color: '#8e92a8' },
+}
+function sc(s: string) { return CFG[s] || { label: s, color: '#8e92a8' } }
+
+const nodeLabels = ref<Record<string, string>>({})
+function nodeLabel(name: string) { return nodeLabels.value[name] || name }
+function fmt(d: string) { if (!d) return '-'; return new Date(d).toLocaleString('zh-CN') }
+function fmtShort(d: string) {
+  if (!d) return '-'
+  return new Date(d).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+}
+
+const stats = computed(() => {
+  const all = tasks.value
+  return {
+    scanned: all.length,
+    running: all.filter(t => t.status === 'RUNNING').length,
+    success: all.filter(t => t.status === 'SUCCESS').length,
+    failed: all.filter(t => t.status === 'FAILED').length,
+  }
+})
+
+const filteredTasks = computed(() => {
+  let list = tasks.value
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(t => (t.filePath || '').toLowerCase().includes(q))
+  }
+  if (statusFilter.value) {
+    list = list.filter(t => t.status === statusFilter.value)
+  }
+  return list
+})
+
+async function loadData() {
   loading.value = true
   try {
-    const { data } = await getTaskLogs(taskId)
-    logs.value = data
+    const [jobRes, tasksRes] = await Promise.all([
+      getJob(jobId),
+      getJobTasks(jobId, currentPage.value, pageSize.value)
+    ])
+    job.value = jobRes.data
+    tasks.value = tasksRes.data?.items || []
+    totalTasks.value = tasksRes.data?.total || 0
+    nodeLabels.value = tasksRes.data?.nodeLabels || {}
   } finally { loading.value = false }
-})
-
-const task = ref<any>(null)
-taskStore.fetchTasks().then(() => {
-  task.value = taskStore.tasks.find((t: any) => t.id === taskId)
-})
-
-const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  QUEUED: { label: '未执行', color: '#8e92a8', bg: 'rgba(142,146,168,0.12)' },
-  RUNNING: { label: '执行中', color: '#5b8def', bg: 'rgba(91,141,239,0.12)' },
-  COMPLETED: { label: '已完成', color: '#3dd68c', bg: 'rgba(61,214,140,0.12)' },
-  PENDING_MANUAL: { label: '待仲裁', color: '#f06580', bg: 'rgba(240,101,128,0.12)' },
-  FAILED: { label: '失败', color: '#f06580', bg: 'rgba(240,101,128,0.12)' },
 }
-function sc(status: string) { return STATUS_CFG[status] || { label: status, color: '#8e92a8', bg: 'rgba(142,146,168,0.12)' } }
 
-const logStatusCfg: Record<string, { label: string; color: string }> = {
-  SUCCESS: { label: '成功', color: '#3dd68c' },
-  FAILED: { label: '失败', color: '#f06580' },
-  SKIPPED: { label: '跳过', color: '#8e92a8' },
+async function doAction(action: string, fn: () => Promise<any>) {
+  actionLoading.value = action
+  try { await fn(); await loadData() }
+  catch { /* toast later */ }
+  finally { actionLoading.value = '' }
 }
-function lsc(status: string) { return logStatusCfg[status] || { label: status, color: '#8e92a8' } }
 
-function formatTime(dateStr: string) {
-  if (!dateStr) return '-'
-  const d = new Date(dateStr)
-  return d.toLocaleString('zh-CN')
+async function doRetryTask(taskId: string) {
+  actionLoading.value = 'retry-' + taskId
+  try { await retryTask(taskId); await loadData() }
+  catch { /* ignore */ }
+  finally { actionLoading.value = '' }
 }
-function formatMs(ms: number | null) {
-  if (!ms) return '-'
-  if (ms < 1000) return ms + 'ms'
-  return (ms / 1000).toFixed(1) + 's'
+
+function connectWs() {
+  if (stompClient) stompClient.deactivate()
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  stompClient = new Client({
+    brokerURL: proto + '//' + location.host + '/ws',
+    reconnectDelay: 3000,
+    onConnect: () => {
+      stompClient!.subscribe('/topic/job/' + jobId, (msg) => {
+        const body = JSON.parse(msg.body)
+        if (body.type === 'logsCleared' && body.taskId) {
+          const t = tasks.value.find((x: any) => x.id === body.taskId)
+          if (t) t.lastCompletedNode = '等待重试'
+        } else if (body.type === 'nodeLog' && body.taskId) {
+          const t = tasks.value.find((x: any) => x.id === body.taskId)
+          if (t) t.lastCompletedNode = body.data.nodeLabel || body.data.nodeName
+        } else if (body.type === 'taskStatusChanged') {
+          const t = tasks.value.find((x: any) => x.id === body.taskId)
+          if (t) t.status = body.status
+        } else if (body.type === 'jobStatusChanged') {
+          if (job.value) job.value.status = body.status
+        }
+      })
+    },
+  })
+  stompClient.activate()
 }
+
+onMounted(async () => { await loadData(); connectWs() })
+onUnmounted(() => { stompClient?.deactivate() })
 </script>
 
 <template>
-  <div class="task-detail">
-    <div class="td-header">
-      <v-btn icon="mdi-arrow-left" size="small" variant="plain" @click="router.push('/workshop/tasks')" />
-      <div v-if="task">
-        <h2 class="td-title">{{ task.name || '未命名任务' }}</h2>
-        <code class="td-id">ID: {{ taskId?.substring(0, 8) }}</code>
-        <span class="status-badge ml-2" :style="{ color: sc(task.currentStatus).color, background: sc(task.currentStatus).bg }">{{ sc(task.currentStatus).label }}</span>
-      </div>
-    </div>
-
+  <div class="jd-page">
     <v-progress-linear v-if="loading" indeterminate color="primary" />
 
-    <div class="td-logs">
-      <h3 class="td-section-title">子任务执行记录 ({{ logs.length }})</h3>
-      <div v-if="logs.length" class="log-list">
-        <div v-for="log in logs" :key="log.id" class="log-item">
-          <div class="log-left">
-            <span class="log-dot" :style="{ background: lsc(log.status).color }"></span>
-            <div>
-              <div class="log-node-name">{{ log.nodeName }}</div>
-              <div class="log-meta">{{ formatTime(log.createdAt) }} · {{ formatMs(log.executionTimeMs) }}</div>
+    <template v-if="job">
+      <!-- Top bar -->
+      <div class="jd-top">
+        <v-btn icon="mdi-arrow-left" size="small" variant="plain" @click="router.push('/workshop/tasks')" />
+        <span class="text-caption text-disabled ml-2">作业详情</span>
+      </div>
+
+      <div class="jd-body">
+        <!-- ====== Left Sidebar (30%) ====== -->
+        <div class="jd-left">
+          <!-- Job Info -->
+          <div class="jd-card">
+            <h2 class="jd-job-title">{{ job.name || '未命名作业' }}</h2>
+            <div class="jd-meta-row">
+              <span class="jd-meta-label">ID</span>
+              <code class="jd-meta-val">{{ jobId?.substring(0, 8) }}</code>
+            </div>
+            <div class="jd-meta-row">
+              <span class="jd-meta-label">创建时间</span>
+              <span class="jd-meta-val">{{ fmt(job.createdAt) }}</span>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="jd-actions">
+              <v-btn icon="mdi-refresh" size="small" variant="tonal" color="primary"
+                :loading="actionLoading === 'start'"
+                @click="doAction('start', () => startJob(jobId))" />
+              <v-btn icon="mdi-stop-circle" size="small" variant="tonal" color="warning"
+                :loading="actionLoading === 'stop'"
+                :disabled="job.status !== 'RUNNING'"
+                @click="doAction('stop', () => stopJob(jobId))" />
+              <v-btn icon="mdi-delete" size="small" variant="tonal" color="error"
+                :loading="actionLoading === 'delete'"
+                @click="doAction('delete', () => deleteJob(jobId, false, false))" />
+              <span class="stb" :style="{ background: sc(job.status).color }">{{ sc(job.status).label }}</span>
             </div>
           </div>
-          <div class="log-right">
-            <span class="log-status" :style="{ color: lsc(log.status).color }">{{ lsc(log.status).label }}</span>
-            <div v-if="log.errorMessage" class="log-error">{{ log.errorMessage }}</div>
+
+          <!-- Stats Gauges -->
+          <div class="jd-card">
+            <div class="jd-card-title">任务统计</div>
+            <div class="jd-gauges">
+              <div class="jd-gauge">
+                <v-progress-circular :model-value="stats.scanned" :max="Math.max(totalTasks, 1)" size="64" width="6" color="grey" bg-color="rgba(255,255,255,.06)">
+                  {{ stats.scanned }}
+                </v-progress-circular>
+                <span class="jd-gauge-label">扫描文件</span>
+              </div>
+              <div class="jd-gauge">
+                <v-progress-circular :model-value="stats.running" :max="Math.max(totalTasks, 1)" size="64" width="6" color="warning" bg-color="rgba(255,255,255,.06)">
+                  {{ stats.running }}
+                </v-progress-circular>
+                <span class="jd-gauge-label">处理中</span>
+              </div>
+              <div class="jd-gauge">
+                <v-progress-circular :model-value="stats.success" :max="Math.max(totalTasks, 1)" size="64" width="6" color="success" bg-color="rgba(255,255,255,.06)">
+                  {{ stats.success }}
+                </v-progress-circular>
+                <span class="jd-gauge-label">成功</span>
+              </div>
+              <div class="jd-gauge">
+                <v-progress-circular :model-value="stats.failed" :max="Math.max(totalTasks, 1)" size="64" width="6" color="error" bg-color="rgba(255,255,255,.06)">
+                  {{ stats.failed }}
+                </v-progress-circular>
+                <span class="jd-gauge-label">失败</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Properties -->
+          <div class="jd-card">
+            <div class="jd-card-title">作业属性</div>
+            <div class="jd-props">
+              <div class="jd-prop-row"><span class="jd-prop-k">输入路径</span><span class="jd-prop-v mono">{{ job.inputPathText || '-' }}</span></div>
+              <div class="jd-prop-row"><span class="jd-prop-k">输出路径</span><span class="jd-prop-v mono">{{ job.outputPathText || '-' }}</span></div>
+              <div class="jd-prop-row"><span class="jd-prop-k">开始时间</span><span class="jd-prop-v">{{ fmt(job.createdAt) }}</span></div>
+              <div class="jd-prop-row"><span class="jd-prop-k">更新时间</span><span class="jd-prop-v">{{ fmt(job.updatedAt) }}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====== Right Main (70%) ====== -->
+        <div class="jd-right">
+          <!-- Filter Bar -->
+          <div class="jd-card">
+            <div class="jd-filter-bar">
+              <v-text-field v-model="searchQuery" label="搜索文件名" density="compact" hide-details clearable
+                prepend-inner-icon="mdi-magnify" style="max-width: 260px" />
+              <v-select v-model="statusFilter" :items="statusList" label="状态" density="compact" hide-details style="max-width: 140px" />
+              <v-spacer />
+              <span class="text-caption text-disabled">总计：{{ totalTasks }} 条任务</span>
+            </div>
+          </div>
+
+          <!-- Task Table -->
+          <div class="jd-card mt-3">
+            <v-table density="compact" hover>
+              <thead>
+                <tr>
+                  <th class="jd-th">状态</th>
+                  <th class="jd-th">文件名</th>
+                  <th class="jd-th">当前节点</th>
+                  <th class="jd-th">更新时间</th>
+                  <th class="jd-th" style="width:60px">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="t in filteredTasks" :key="t.id" class="jd-tr">
+                  <td>
+                    <span class="stb" :style="{ background: sc(t.status).color }">{{ sc(t.status).label }}</span>
+                  </td>
+                  <td>
+                    <a class="jd-task-link" @click="router.push(`/workshop/records/${t.id}`)">
+                      {{ t.filePath?.split('/').pop() || t.filePath || '-' }}
+                    </a>
+                  </td>
+                  <td class="text-caption text-disabled">{{ nodeLabel(t.lastCompletedNode) || '未开始' }}</td>
+                  <td class="text-caption text-disabled">{{ fmtShort(t.updatedAt) || fmtShort(t.createdAt) }}</td>
+                  <td>
+                    <v-btn v-if="t.status === 'FAILED'" icon="mdi-refresh" size="x-small" variant="text" color="warning"
+                      :loading="actionLoading === 'retry-' + t.id"
+                      @click="doRetryTask(t.id)" />
+                    <v-btn v-else icon="mdi-dots-vertical" size="x-small" variant="text"
+                      @click="router.push(`/workshop/records/${t.id}`)" />
+                  </td>
+                </tr>
+                <tr v-if="!filteredTasks.length">
+                  <td colspan="5" class="text-center py-6 text-disabled">暂无任务</td>
+                </tr>
+              </tbody>
+            </v-table>
+
+            <!-- Pagination -->
+            <div v-if="totalTasks > pageSize" class="jd-pagination">
+              <v-pagination v-model="currentPage" :length="Math.ceil(totalTasks / pageSize)" :total-visible="7"
+                density="compact" @update:model-value="loadData()" />
+            </div>
           </div>
         </div>
       </div>
-      <div v-else class="log-empty">暂无执行记录</div>
-    </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.task-detail {
-  height: 100%;
-  overflow: auto;
-  padding: 20px 24px;
-}
-.td-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.td-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
-.td-id {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: rgb(var(--v-theme-secondary));
-}
-.td-section-title {
-  font-size: 14px; font-weight: 600;
-  margin: 0 0 14px;
-}
+.jd-page { height: 100%; overflow: auto; padding: 16px 24px 24px; background: #1a1b1e; }
+.jd-top { display: flex; align-items: center; margin-bottom: 16px; }
 
-.log-list { display: flex; flex-direction: column; gap: 2px; }
-.log-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-radius: 8px;
+.jd-body { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .jd-body { grid-template-columns: 1fr; } }
+
+.jd-left { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.jd-right { min-width: 0; }
+
+/* Cards */
+.jd-card {
   background: rgb(var(--v-theme-surface));
   border: 1px solid rgb(var(--v-border-color));
+  border-radius: 10px;
+  padding: 16px;
 }
-.log-left { display: flex; gap: 10px; align-items: flex-start; }
-.log-dot {
-  width: 10px; height: 10px; border-radius: 50%;
-  margin-top: 4px; flex-shrink: 0;
-}
-.log-node-name { font-size: 13px; font-weight: 600; }
-.log-meta { font-size: 11px; color: rgb(var(--v-theme-secondary)); margin-top: 2px; }
-.log-right { text-align: right; }
-.log-status { font-size: 12px; font-weight: 600; }
-.log-error { font-size: 11px; color: rgb(var(--v-theme-error)); margin-top: 4px; max-width: 300px; word-break: break-all; }
-.log-empty { text-align: center; padding: 40px; color: rgb(var(--v-theme-secondary)); font-size: 14px; }
+.jd-card-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgb(var(--v-border-color)); }
 
-.status-badge {
-  display: inline-block; font-size: 11px; font-weight: 600;
-  padding: 2px 8px; border-radius: 4px; white-space: nowrap; vertical-align: middle;
-}
+/* Job info */
+.jd-job-title { font-size: 20px; font-weight: 700; margin: 0 0 12px; line-height: 1.3; }
+.jd-meta-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.jd-meta-label { color: #909399; min-width: 56px; }
+.jd-meta-val { color: rgb(var(--v-theme-secondary)); }
+.jd-meta-val.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.jd-actions { display: flex; align-items: center; gap: 6px; margin-top: 14px; }
+
+/* Stats gauges */
+.jd-gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.jd-gauge { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.jd-gauge-label { font-size: 10px; color: #909399; }
+
+/* Props */
+.jd-props { display: flex; flex-direction: column; gap: 6px; }
+.jd-prop-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 12px; }
+.jd-prop-k { color: #909399; white-space: nowrap; }
+.jd-prop-v { color: rgb(var(--v-theme-secondary)); text-align: right; word-break: break-all; }
+.jd-prop-v.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+/* Filter bar */
+.jd-filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* Table */
+.jd-th { font-size: 11px; font-weight: 600; color: #909399; text-transform: uppercase; padding: 8px 10px !important; }
+.jd-tr:hover { background: rgb(var(--v-theme-surface-variant)); }
+.jd-task-link { color: rgb(var(--v-theme-primary)); cursor: pointer; font-size: 13px; text-decoration: none; }
+.jd-task-link:hover { text-decoration: underline; }
+
+/* Pagination */
+.jd-pagination { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+/* Status badge */
+.stb { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; color: #fff; white-space: nowrap; }
 </style>

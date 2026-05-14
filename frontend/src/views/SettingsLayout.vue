@@ -8,6 +8,7 @@ const menuItems = [
   { key: 'storage', label: '存储节点', icon: 'mdi-server', path: '/settings/storage' },
   { key: 'llm', label: 'AI 算力配置', icon: 'mdi-brain', path: '/settings/llm' },
   { key: 'categories-tags', label: '分类与标签', icon: 'mdi-tag-multiple', path: '/settings/categories-tags' },
+  { key: 'plugins', label: '节点插件管理', icon: 'mdi-puzzle', path: '/settings/plugins' },
 ]
 </script>
 

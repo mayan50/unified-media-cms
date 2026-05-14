@@ -25,7 +25,7 @@ public class TaskService {
     private final TagRepository tagRepository;
     private final CategoryRepository categoryRepository;
     private final ExternalIdRepository externalIdRepository;
-    private final List<com.unifiedmedia.cms.pipeline.core.PipelineNode> allNodes;
+    private final com.unifiedmedia.cms.plugin.NodeRegistry nodeRegistry;
 
     // ==================== 查询 ====================
 
@@ -49,10 +49,7 @@ public class TaskService {
         int total = all.size();
         int from = (page - 1) * size;
         int to = Math.min(from + size, total);
-        var nodeLabels = allNodes.stream().collect(Collectors.toMap(
-                com.unifiedmedia.cms.pipeline.core.PipelineNode::getNodeName,
-                com.unifiedmedia.cms.pipeline.core.PipelineNode::getNodeLabel,
-                (a, b) -> a));
+        var nodeLabels = nodeRegistry.getNodeLabels();
         return Map.of("items", from < total ? all.subList(from, to) : List.of(),
                 "total", total, "page", page, "size", size, "nodeLabels", nodeLabels);
     }

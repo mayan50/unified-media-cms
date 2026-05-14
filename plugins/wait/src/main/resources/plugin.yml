@@ -1,0 +1,8 @@
+plugin:
+  id: wait
+  name: "延时等待"
+  description: "暂停指定毫秒数后继续执行"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.control.WaitNode

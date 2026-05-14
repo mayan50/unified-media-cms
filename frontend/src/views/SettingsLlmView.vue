@@ -18,10 +18,10 @@ async function save() {
 </script>
 
 <template>
-  <div class="llm-view">
-    <div class="sv-toolbar"><h3>AI 算力配置</h3></div>
-    <div class="llm-body">
-      <div class="llm-card">
+  <div class="page-view">
+    <div class="page-toolbar"><h3>AI 算力配置</h3></div>
+    <div class="page-body">
+      <div class="page-card">
         <div class="text-caption text-disabled mb-2">提供商</div>
         <v-radio-group v-model="config.provider" inline hide-details density="compact" class="mb-4">
           <v-radio label="Ollama" value="ollama" />
@@ -37,9 +37,5 @@ async function save() {
 </template>
 
 <style scoped>
-.llm-view { height: 100%; display: flex; flex-direction: column; }
-.sv-toolbar { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgb(var(--v-border-color)); background: rgb(var(--v-theme-surface)); }
-.sv-toolbar h3 { margin: 0; font-size: 16px; font-weight: 600; }
-.llm-body { flex: 1; overflow: auto; padding: 20px; max-width: 520px; }
-.llm-card { background: rgb(var(--v-theme-surface-variant)); border: 1px solid rgb(var(--v-border-color)); border-radius: 10px; padding: 20px; }
+.page-card { max-width: 520px; }
 </style>

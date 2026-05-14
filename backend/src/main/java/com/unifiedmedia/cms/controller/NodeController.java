@@ -2,7 +2,6 @@ package com.unifiedmedia.cms.controller;
 
 import com.unifiedmedia.cms.service.NodeRegistryService;
 import com.unifiedmedia.cms.service.NodeRegistryService.CategoryDef;
-import com.unifiedmedia.cms.service.PipelineOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,12 +16,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class NodeController {
 
-    private final PipelineOrchestrator orchestrator;
     private final NodeRegistryService nodeRegistryService;
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getAvailableNodes() {
-        return ResponseEntity.ok(orchestrator.getAvailableNodes());
+        return ResponseEntity.ok(nodeRegistryService.getAvailableNodes());
     }
 
     @GetMapping("/registry")

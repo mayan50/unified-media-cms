@@ -13,7 +13,7 @@ const isEditing = computed(() => {
 
 const menuItems = [
   { key: 'templates', label: '模板编排', icon: 'mdi-tools', path: '/workshop/templates' },
-  { key: 'tasks', label: '任务看板', icon: 'mdi-format-list-bulleted', path: '/workshop/tasks' },
+  { key: 'tasks', label: '作业看板', icon: 'mdi-format-list-bulleted', path: '/workshop/tasks' },
   { key: 'records', label: '任务记录', icon: 'mdi-history', path: '/workshop/records' },
 ]
 </script>

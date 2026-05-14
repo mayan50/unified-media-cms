@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { useTaskStore } from './stores/task'
 import { useThemeStore } from './stores/theme'
 import { getStorageNodes } from './api/modules'
-import SettingsPanel from './components/SettingsPanel.vue'
 import ToastProvider from './components/ToastProvider.vue'
 
 const router = useRouter()
@@ -14,11 +13,11 @@ const themeStore = useThemeStore()
 
 const sidebarCollapsed = ref(false)
 const isWorkshop = computed(() => route.path.startsWith('/workshop'))
+const hideSidebar = computed(() => route.path.startsWith('/workshop') || route.path.startsWith('/settings'))
 const activeNav = ref('all')
 const storageNodes = ref<any[]>([])
 const pendingCount = ref(0)
 const globalSearch = ref('')
-const settingsVisible = ref(false)
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -93,7 +92,13 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
             @click="router.push(isWorkshop ? '/' : '/workshop')"
           />
         </v-badge>
-        <v-btn icon="mdi-cog" size="small" variant="plain" @click="settingsVisible = !settingsVisible" />
+        <v-btn
+          icon="mdi-cog"
+          size="small"
+          :variant="route.path.startsWith('/settings') ? 'tonal' : 'plain'"
+          :color="route.path.startsWith('/settings') ? 'primary' : undefined"
+          @click="router.push('/settings')"
+        />
         <v-btn
           :icon="themeStore.mode === 'dark' ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent'"
           size="small"
@@ -106,7 +111,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 
     <!-- SIDEBAR -->
     <v-navigation-drawer
-      v-if="!isWorkshop"
+      v-if="!hideSidebar"
       :rail="sidebarCollapsed"
       permanent
       width="220"
@@ -159,21 +164,6 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
       <router-view />
     </v-main>
 
-    <!-- SETTINGS DRAWER -->
-    <v-navigation-drawer
-      v-model="settingsVisible"
-      location="right"
-      temporary
-      width="520"
-    >
-      <v-toolbar flat density="compact" color="surface">
-        <v-toolbar-title>系统设置</v-toolbar-title>
-        <v-btn icon="mdi-close" variant="plain" size="small" @click="settingsVisible = false" />
-      </v-toolbar>
-      <div class="pa-5">
-        <SettingsPanel />
-      </div>
-    </v-navigation-drawer>
   </v-app>
 </template>
 

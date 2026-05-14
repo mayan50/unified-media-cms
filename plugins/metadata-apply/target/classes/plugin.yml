@@ -1,0 +1,8 @@
+plugin:
+  id: metadata-apply
+  name: "元数据应用"
+  description: "将刮削结果应用到资产实体"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.processing.MetadataApplyNode

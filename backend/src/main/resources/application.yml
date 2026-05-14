@@ -36,3 +36,7 @@ spring:
 app:
   pipeline:
     default-template-name: default-book-pipeline
+
+cms:
+  plugin:
+    dir: "./plugins"

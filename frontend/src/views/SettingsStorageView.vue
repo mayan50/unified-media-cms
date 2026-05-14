@@ -55,10 +55,10 @@ async function doDelete() {
 </script>
 
 <template>
-  <div class="storage-view">
-    <div class="sv-toolbar">
+  <div class="page-view">
+    <div class="page-toolbar">
       <h3>存储节点</h3>
-      <div class="sv-toolbar-right">
+      <div class="page-toolbar-right">
         <div class="view-toggle mr-3">
           <v-btn icon="mdi-view-grid" size="small" :variant="viewMode === 'card' ? 'tonal' : 'plain'" :color="viewMode === 'card' ? 'primary' : undefined" @click="viewMode = 'card'" />
           <v-btn icon="mdi-view-list" size="small" :variant="viewMode === 'table' ? 'tonal' : 'plain'" :color="viewMode === 'table' ? 'primary' : undefined" @click="viewMode = 'table'" />
@@ -70,25 +70,26 @@ async function doDelete() {
     <v-progress-linear v-if="loading" indeterminate color="primary" />
 
     <!-- Card View -->
-    <div v-if="viewMode === 'card'" class="sv-cards">
-      <div v-for="n in nodes" :key="n.id" class="sv-card">
-        <div class="sv-card-top">
+    <div v-if="viewMode === 'card'" class="page-cards">
+      <div v-for="n in nodes" :key="n.id" class="page-card">
+        <div class="page-card-top">
           <div>
-            <div class="sv-card-name">{{ n.name }}</div>
+            <div class="page-card-name">{{ n.name }}</div>
             <v-chip size="x-small" :color="n.providerType === 'LOCAL' ? 'primary' : 'warning'" variant="tonal">{{ n.providerType }}</v-chip>
           </div>
-          <div class="sv-card-actions">
+          <div class="page-card-actions">
             <v-btn icon="mdi-pencil" size="x-small" variant="tonal" color="primary" @click="openEdit(n)" title="修改" />
             <v-btn icon="mdi-delete" size="x-small" variant="tonal" color="error" @click="askDelete(n.id)" title="删除" />
           </div>
         </div>
-        <code class="sv-card-path">{{ n.connectionConfig?.basePath || n.connectionConfig?.endpoint || '-' }}</code>
+        <code class="page-card-path">{{ n.connectionConfig?.basePath || n.connectionConfig?.endpoint || '-' }}</code>
       </div>
       <div v-if="!nodes.length && !loading" class="text-caption text-disabled text-center py-8" style="grid-column:1/-1">暂无存储节点</div>
     </div>
 
     <!-- Table View -->
-    <div v-else class="sv-table-wrap">
+    <div v-else class="page-body">
+      <div class="page-table-wrap">
       <v-table density="compact" hover>
         <thead><tr><th>名称</th><th>类型</th><th>路径</th><th>只读</th><th style="width:100px">操作</th></tr></thead>
         <tbody>
@@ -105,6 +106,7 @@ async function doDelete() {
         </tbody>
       </v-table>
       <div v-if="!nodes.length && !loading" class="text-caption text-disabled text-center py-8">暂无存储节点</div>
+      </div>
     </div>
 
     <!-- Dialog -->
@@ -137,17 +139,3 @@ async function doDelete() {
     </v-dialog>
   </div>
 </template>
-
-<style scoped>
-.storage-view { height: 100%; display: flex; flex-direction: column; }
-.sv-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgb(var(--v-border-color)); background: rgb(var(--v-theme-surface)); }
-.sv-toolbar h3 { margin: 0; font-size: 16px; font-weight: 600; }
-.sv-toolbar-right { display: flex; align-items: center; }
-.sv-cards { flex: 1; overflow: auto; padding: 12px 20px 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-content: start; }
-.sv-card { background: rgb(var(--v-theme-surface-variant)); border: 1px solid rgb(var(--v-border-color)); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.sv-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.sv-card-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.sv-card-path { font-size: 12px; color: rgb(var(--v-theme-secondary)); font-family: 'JetBrains Mono', monospace; }
-.sv-card-actions { display: flex; gap: 4px; }
-.sv-table-wrap { flex: 1; overflow: auto; padding: 0 20px 20px; }
-</style>

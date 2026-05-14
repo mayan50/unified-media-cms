@@ -1,16 +1,19 @@
 package com.unifiedmedia.cms.pipeline;
 
+import com.unifiedmedia.cms.entity.Asset;
+import com.unifiedmedia.cms.entity.MediaDetail;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * 流式上下文 - 在节点间流转的载体
  */
 @Data
 @Accessors(chain = true)
-public class TaskContext {
+public class TaskContext implements com.unifiedmedia.cms.pipeline.core.TaskContext {
 
     private UUID taskId;
     private UUID assetId;
@@ -63,6 +66,9 @@ public class TaskContext {
     // 通用数据存储 - 节点间传递任意数据
     private final Map<String, Object> data = new HashMap<>();
 
+    // ── 日志 ──
+    private final List<String> logs = new ArrayList<>();
+
     public TaskContext put(String key, Object value) {
         data.put(key, value);
         return this;
@@ -75,5 +81,56 @@ public class TaskContext {
 
     public boolean has(String key) {
         return data.containsKey(key);
+    }
+
+    // ── core.TaskContext bridge ──
+
+    @Override
+    public Asset getAsset() { return null; }
+
+    @Override
+    public <T extends MediaDetail> T getDetail(Class<T> type) { return null; }
+
+    @Override
+    public <T extends MediaDetail> T getOrCreateDetail(Class<T> type, Supplier<T> factory) {
+        return factory.get();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getPipelineData(String key, Class<T> type) {
+        Object val = data.get(key);
+        if (type.isInstance(val)) return (T) val;
+        return null;
+    }
+
+    @Override
+    public void setPipelineData(String key, Object value) {
+        put(key, value);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> List<T> getPipelineList(String key, Class<T> elementType) {
+        Object raw = data.get(key);
+        if (!(raw instanceof Iterable<?> iterable)) return new ArrayList<>();
+        List<T> result = new ArrayList<>();
+        for (Object item : iterable) {
+            if (elementType.isInstance(item)) result.add((T) item);
+        }
+        return result;
+    }
+
+    @Override
+    public void addLog(String level, String message) {
+        String prefix = switch (level) {
+            case "ok" -> "[OK] "; case "warn" -> "[WARN] "; case "err" -> "[ERR] "; default -> "";
+        };
+        logs.add(prefix + message);
+    }
+
+    @Override
+    public List<String> drainLogs() {
+        List<String> copy = new ArrayList<>(logs); logs.clear(); return copy;
     }
 }

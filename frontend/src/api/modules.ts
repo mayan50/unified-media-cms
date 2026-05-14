@@ -16,16 +16,41 @@ export const saveLlmConfig = (data: any) => api.post('/settings/llm', data)
 export const getAssets = (params?: any) => api.get('/assets', { params })
 export const getAssetDetail = (id: string) => api.get(`/assets/${id}`)
 export const updateAsset = (id: string, data: any) => api.put(`/assets/${id}`, data)
+export const updateAssetFull = (id: string, data: any) => api.put(`/assets/${id}/full`, data)
+export const deleteAsset = (id: string) => api.delete(`/assets/${id}`)
+
+// === Jobs ===
+export const getJobs = (params?: any) => api.get('/jobs', { params })
+export const getJob = (id: string) => api.get(`/jobs/${id}`)
+export const createJob = (data: any) => api.post('/jobs', data)
+export const startJob = (id: string) => api.post(`/jobs/${id}/start`)
+export const continueJob = (id: string) => api.post(`/jobs/${id}/continue`)
+export const stopJob = (id: string) => api.post(`/jobs/${id}/stop`)
+export const resetJob = (id: string) => api.post(`/jobs/${id}/reset`)
+export const updateJob = (id: string, data: any) => api.put(`/jobs/${id}`, data)
+export const deleteJob = (id: string, params?: any) => api.delete(`/jobs/${id}`, { params })
 
 // === Tasks ===
-export const getTasks = (params?: any) => api.get('/tasks', { params })
-export const submitTask = (data: any) => api.post('/tasks/submit', data)
-export const startTask = (taskId: string) => api.post(`/tasks/${taskId}/start`)
-export const stopTask = (taskId: string) => api.post(`/tasks/${taskId}/stop`)
-export const deleteTask = (taskId: string) => api.delete(`/tasks/${taskId}`)
-export const updateTask = (taskId: string, data: any) => api.put(`/tasks/${taskId}`, data)
+export const getJobTasks = (jobId: string, page = 1, size = 50) => api.get(`/jobs/${jobId}/tasks`, { params: { page, size } })
+export const getTask = (id: string) => api.get(`/jobs/tasks/${id}`)
+export const getTaskDetail = (id: string) => api.get(`/jobs/tasks/${id}/detail`)
+export const getTaskNodeLogs = (id: string) => api.get(`/jobs/tasks/${id}/logs`)
+export const getAllTasks = (params?: any) => api.get('/jobs/tasks', { params })
+export const retryTask = (id: string) => api.post(`/jobs/tasks/${id}/retry`)
+// export const deleteTask = (id: string, deleteAsset = false, deleteSourceFiles = false) =>
+//   api.delete(`/jobs/tasks/${id}`, { params: { deleteAsset, deleteSourceFiles } })
+export const getTaskLogs = (taskId: string) => api.get(`/jobs/tasks/${taskId}/logs`)
+
+export const getTasks = (params?: any) => api.get('/jobs/tasks', { params })
+export const submitTask = createJob
+export const startTask = startJob
+export const stopTask = stopJob
+export const updateTask = updateJob
+// export const resumeTask = continueJob
+export const deleteTask = (taskId: string, deleteAsset = false, deleteSourceFiles = false) =>
+  api.delete(`/jobs/tasks/${taskId}`, { params: { deleteAsset, deleteSourceFiles } })
 export const resumeTask = (taskId: string, data: any) => api.post(`/tasks/${taskId}/resume`, data)
-export const getTaskLogs = (taskId: string) => api.get(`/tasks/${taskId}/logs`)
+
 
 // === Nodes ===
 export const getAvailableNodes = () => api.get('/nodes')
@@ -40,3 +65,13 @@ export const deleteTemplate = (id: string) => api.delete(`/templates/${id}`)
 // === Categories & Tags ===
 export const getCategories = () => api.get('/categories')
 export const getTags = () => api.get('/tags')
+export const createCategory = (data: any) => api.post('/categories', data)
+export const updateCategory = (id: string, data: any) => api.put(`/categories/${id}`, data)
+export const deleteCategory = (id: string) => api.delete(`/categories/${id}`)
+export const createTag = (data: any) => api.post('/tags', data)
+export const updateTag = (id: string, data: any) => api.put(`/tags/${id}`, data)
+export const deleteTag = (id: string) => api.delete(`/tags/${id}`)
+
+// === Languages & Creators ===
+export const getLanguages = () => api.get('/languages')
+export const getCreators = (params?: any) => api.get('/creators', { params })

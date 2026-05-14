@@ -332,18 +332,25 @@ async function saveAndDeploy() {
     })),
     edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, sourcePort: e.sourceHandle || 'default' })),
   }
+  if (!editName.value.trim()) {
+    toast.warning('请输入模板名称')
+    return
+  }
   try {
     if (editId.value) {
-      await updateTemplate(editId.value, { name: editName.value, description: editDesc.value, graphPayload, isDefault: false })
+      await updateTemplate(editId.value, { name: editName.value.trim(), description: editDesc.value, graphPayload, isDefault: false })
     } else {
-      await createTemplate({ name: editName.value, description: editDesc.value, graphPayload, isDefault: false })
+      await createTemplate({ name: editName.value.trim(), description: editDesc.value, graphPayload, isDefault: false })
     }
     toast.success('模板已保存')
     editorVisible.value = false
     router.replace({ query: {} })
     const { data } = await getTemplates()
     templates.value = data
-  } catch { toast.error('保存失败') }
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.response?.data?.error || '保存失败'
+    toast.error(msg)
+  }
 }
 
 // ---- Open editor ----
@@ -389,17 +396,18 @@ function openEditTemplate(tpl: any) {
 </script>
 
 <template>
-  <div class="template-builder" @click="hideCtxMenu">
+  <div class="page-view" @click="hideCtxMenu">
     <!-- Template List -->
-    <div v-if="!editorVisible" class="tpl-list-view">
-      <div class="tpl-toolbar">
+    <template v-if="!editorVisible">
+      <div class="page-toolbar">
         <h3>处理模板</h3>
         <v-btn color="primary" size="default" prepend-icon="mdi-plus" @click="openNewTemplate">新建模板</v-btn>
       </div>
-      <div class="tpl-grid">
+      <div class="page-body">
+        <div class="page-cards">
         <v-progress-circular v-if="loading" indeterminate color="primary" class="ma-auto" />
-        <div v-for="tpl in templates" :key="tpl.id" class="tpl-card" @click="openEditTemplate(tpl)">
-          <div class="tpl-card-header">
+        <div v-for="tpl in templates" :key="tpl.id" class="page-card tpl-card" @click="openEditTemplate(tpl)">
+          <div class="page-card-top tpl-card-header">
             <span class="tpl-name">{{ tpl.name }}</span>
             <v-chip v-if="tpl.isDefault" size="x-small" color="success" variant="tonal">默认</v-chip>
           </div>
@@ -420,8 +428,9 @@ function openEditTemplate(tpl: any) {
         <div v-if="!templates.length && !loading" class="tpl-empty">
           <div class="text-caption text-disabled text-center py-10">暂无模板，点击新建开始</div>
         </div>
+        </div>
       </div>
-    </div>
+    </template>
 
     <!-- ====== FLOW EDITOR ====== -->
     <div v-else class="flow-editor">
@@ -551,20 +560,16 @@ function openEditTemplate(tpl: any) {
 </style>
 
 <style scoped>
-.template-builder { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-.tpl-list-view { flex: 1; overflow-y: auto; padding: 20px; }
-.tpl-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.tpl-toolbar h3 { margin: 0; font-size: 16px; font-weight: 600; }
-.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+/* Template card overrides */
 .tpl-card {
-  background: rgb(var(--v-theme-surface-variant));
-  border: 1px solid rgb(var(--v-border-color));
-  border-radius: 10px; padding: 14px; cursor: pointer;
+  padding: 14px;
+  cursor: pointer;
   transition: border-color 0.15s;
+  background: rgb(var(--v-theme-surface-variant));
 }
 .tpl-card:hover { border-color: rgb(var(--v-theme-primary)); }
-.tpl-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.tpl-name { font-size: 14px; font-weight: 600; flex: 1; }
+.tpl-card-header { margin-bottom: 6px; }
+.tpl-name { flex: 1; }
 .tpl-card-desc { font-size: 12px; color: rgb(var(--v-theme-secondary)); margin-bottom: 10px; }
 .tpl-card-nodes { display: flex; flex-wrap: wrap; gap: 4px; }
 .tpl-node-chip { cursor: inherit !important; }

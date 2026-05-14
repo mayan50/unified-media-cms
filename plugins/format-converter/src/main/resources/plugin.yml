@@ -1,0 +1,8 @@
+plugin:
+  id: format-converter
+  name: "TXT→EPUB"
+  description: "将TXT文本转换为标准EPUB电子书格式，含章节目录"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.processing.FormatConverterNode

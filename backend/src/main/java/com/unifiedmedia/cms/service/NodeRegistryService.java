@@ -1,8 +1,9 @@
 package com.unifiedmedia.cms.service;
 
-import com.unifiedmedia.cms.pipeline.ConfigFieldDef;
-import com.unifiedmedia.cms.pipeline.NodeType;
-import com.unifiedmedia.cms.pipeline.PipelineNode;
+import com.unifiedmedia.cms.pipeline.core.ConfigFieldDef;
+import com.unifiedmedia.cms.pipeline.core.NodeType;
+import com.unifiedmedia.cms.pipeline.core.PipelineNode;
+import com.unifiedmedia.cms.plugin.NodeRegistry;
 import lombok.*;
 import lombok.experimental.Accessors;
 import org.springframework.stereotype.Service;
@@ -11,21 +12,33 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 节点注册表服务 — 动态发现所有 PipelineNode bean，
+ * 节点注册表服务 — 从动态 NodeRegistry 实时获取所有节点，
  * 按节点类型分组返回，配置字段由各节点自描述。
  */
 @Service
 @RequiredArgsConstructor
 public class NodeRegistryService {
 
-    private final List<PipelineNode> allNodes;
+    private final NodeRegistry registry;
+
+    /** 简单列表：{name, className}，供 NodeController.getAvailableNodes() */
+    public List<Map<String, Object>> getAvailableNodes() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (var node : registry.getNodes()) {
+            Map<String, Object> info = new HashMap<>();
+            info.put("name", node.getNodeName());
+            info.put("className", node.getClass().getSimpleName());
+            result.add(info);
+        }
+        return result;
+    }
 
     /**
      * 返回按 NodeType 分组的完整注册表
      */
     public List<CategoryDef> getRegistry() {
-        // 按 NodeType 分组
-        Map<NodeType, List<NodeDef>> grouped = allNodes.stream()
+        // 按 NodeType 分组 — 每次请求实时从动态注册表读取
+        Map<NodeType, List<NodeDef>> grouped = registry.getNodes().stream()
                 .map(node -> NodeDef.builder()
                         .name(node.getNodeName())
                         .label(node.getNodeLabel())
@@ -57,7 +70,7 @@ public class NodeRegistryService {
      * 按名称查找单个节点定义
      */
     public Optional<NodeDef> findNode(String name) {
-        return allNodes.stream()
+        return registry.getNodes().stream()
                 .filter(n -> n.getNodeName().equals(name))
                 .findFirst()
                 .map(n -> NodeDef.builder()

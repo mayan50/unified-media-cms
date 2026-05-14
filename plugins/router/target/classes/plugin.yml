@@ -1,0 +1,8 @@
+plugin:
+  id: router
+  name: "条件分支"
+  description: "根据条件表达式将数据流分发到不同分支"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.control.RouterNode

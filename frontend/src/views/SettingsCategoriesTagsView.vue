@@ -60,17 +60,18 @@ async function delTag(id: string) {
 </script>
 
 <template>
-  <div class="sct-page">
-    <div class="sct-top"><h2>分类与标签</h2></div>
+  <div class="page-view">
+    <div class="page-toolbar"><h3>分类与标签</h3></div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" />
 
-    <v-row v-if="!loading">
+    <div v-if="!loading" class="page-body">
+      <v-row>
       <!-- Categories -->
       <v-col cols="6">
-        <div class="sct-card">
-          <div class="sct-card-head">
-            <h3>分类</h3>
+        <div class="page-card">
+          <div class="page-card-top">
+            <span class="page-card-name">分类</span>
             <v-btn size="small" prepend-icon="mdi-plus" variant="tonal" color="primary" @click="openCatCreate">新增</v-btn>
           </div>
           <v-table density="compact">
@@ -92,9 +93,9 @@ async function delTag(id: string) {
 
       <!-- Tags -->
       <v-col cols="6">
-        <div class="sct-card">
-          <div class="sct-card-head">
-            <h3>标签</h3>
+        <div class="page-card">
+          <div class="page-card-top">
+            <span class="page-card-name">标签</span>
             <v-btn size="small" prepend-icon="mdi-plus" variant="tonal" color="primary" @click="openTagCreate">新增</v-btn>
           </div>
           <v-table density="compact">
@@ -113,6 +114,7 @@ async function delTag(id: string) {
         </div>
       </v-col>
     </v-row>
+    </div>
 
     <!-- Category Dialog -->
     <v-dialog v-model="catDialog" max-width="360">
@@ -142,11 +144,6 @@ async function delTag(id: string) {
 </template>
 
 <style scoped>
-.sct-page { padding: 20px 24px; height: 100%; overflow: auto; }
-.sct-top h2 { font-size: 18px; font-weight: 700; margin: 0 0 16px; }
-.sct-card { background: rgb(var(--v-theme-surface)); border: 1px solid rgb(var(--v-border-color)); border-radius: 10px; padding: 16px; }
-.sct-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.sct-card-head h3 { font-size: 14px; font-weight: 600; margin: 0; }
 .sct-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: rgba(124,92,252,.12); color: rgb(var(--v-theme-primary)); }
 .rd-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 9999; color: #fff; background: #3dd68c; }
 </style>

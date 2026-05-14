@@ -1,0 +1,81 @@
+/* src/assets/global-page-layout.css
+   全局页面布局标准样式 — 所有带侧边栏的管理页共用 */
+
+.page-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgb(var(--v-theme-background));
+}
+
+/* 强制锁死顶栏高度 = 左侧 sidebar-top 精准高度 69px，彻底杜绝边框错位 */
+.page-toolbar {
+  flex: 0 0 69px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px; /* 严禁加上下 padding，用 flex 居中文字 */
+  border-bottom: 1px solid rgb(var(--v-border-color));
+  background: rgb(var(--v-theme-surface));
+}
+
+.page-toolbar h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.page-toolbar-left { display: flex; gap: 8px; align-items: center; }
+.page-toolbar-right { display: flex; align-items: center; }
+
+/* 普通表单 / 表格页面 */
+.page-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* 卡片网格页面 */
+.page-cards {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 24px;
+  align-content: start;
+}
+
+/* 统一所有卡片风格 */
+.page-card {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgb(var(--v-border-color));
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.page-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.page-card-name { font-size: 14px; font-weight: 600; }
+.page-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.page-card-path { font-size: 12px; color: rgb(var(--v-theme-secondary)); font-family: 'JetBrains Mono', monospace; }
+
+/* 表格视图包裹器 */
+.page-table-wrap {
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgb(var(--v-border-color));
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* 视图切换按钮组 */
+.view-toggle { display: flex; border-radius: 8px; background: rgb(var(--v-theme-surface-variant)); padding: 2px; }

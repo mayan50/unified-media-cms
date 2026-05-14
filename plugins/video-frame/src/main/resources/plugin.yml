@@ -1,0 +1,8 @@
+plugin:
+  id: video-frame
+  name: "视频抽帧"
+  description: "从视频文件中提取关键帧截图（需FFmpeg）"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.processing.VideoFrameNode

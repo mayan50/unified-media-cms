@@ -30,7 +30,7 @@ public class WebSocketPipelineEventPublisher implements PipelineEventListener {
                 "taskId", taskId,
                 "data", logEvent
         ));
-        log.debug("[WS] Pushed nodeLog to task/{} and job/{}", taskId, jobId);
+        log.info("[WS] Pushed nodeLog to task/{} and job/{}", taskId, jobId);
     }
 
     @Override
@@ -46,7 +46,7 @@ public class WebSocketPipelineEventPublisher implements PipelineEventListener {
                 "taskId", taskId,
                 "status", status
         ));
-        log.debug("[WS] Pushed taskStatusChanged for task/{} to job/{}", taskId, jobId);
+        log.info("[WS] Pushed taskStatusChanged for task/{} to job/{}", taskId, jobId);
     }
 
     @Override
@@ -56,7 +56,7 @@ public class WebSocketPipelineEventPublisher implements PipelineEventListener {
                 "jobId", jobId,
                 "status", status
         ));
-        log.debug("[WS] Pushed jobStatusChanged for job/{}", jobId);
+        log.info("[WS] Pushed jobStatusChanged for job/{}", jobId);
     }
 
     @Override
@@ -69,6 +69,6 @@ public class WebSocketPipelineEventPublisher implements PipelineEventListener {
                 "type", "logsCleared",
                 "taskId", taskId
         ));
-        log.debug("[WS] Pushed logsCleared for task/{} and job/{}", taskId, jobId);
+        log.info("[WS] Pushed logsCleared for task/{} and job/{}", taskId, jobId);
     }
 }

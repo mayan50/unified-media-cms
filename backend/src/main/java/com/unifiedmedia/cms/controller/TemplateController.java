@@ -2,8 +2,8 @@ package com.unifiedmedia.cms.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unifiedmedia.cms.dto.TemplateRequest;
-import com.unifiedmedia.cms.entity.PipelineTemplate;
-import com.unifiedmedia.cms.repository.PipelineTemplateRepository;
+import com.unifiedmedia.cms.entity.Template;
+import com.unifiedmedia.cms.repository.TemplateRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,24 +17,24 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TemplateController {
 
-    private final PipelineTemplateRepository templateRepository;
+    private final TemplateRepository templateRepository;
     private final ObjectMapper objectMapper;
 
     @GetMapping
-    public ResponseEntity<List<PipelineTemplate>> listTemplates() {
+    public ResponseEntity<List<Template>> listTemplates() {
         return ResponseEntity.ok(templateRepository.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PipelineTemplate> getTemplate(@PathVariable UUID id) {
+    public ResponseEntity<Template> getTemplate(@PathVariable UUID id) {
         return templateRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<PipelineTemplate> createTemplate(@Valid @RequestBody TemplateRequest request) {
-        PipelineTemplate template = PipelineTemplate.builder()
+    public ResponseEntity<Template> createTemplate(@Valid @RequestBody TemplateRequest request) {
+        Template template = Template.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .graphPayload(serializeJson(request.getGraphPayload()))
@@ -44,8 +44,8 @@ public class TemplateController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PipelineTemplate> updateTemplate(@PathVariable UUID id, @Valid @RequestBody TemplateRequest request) {
-        PipelineTemplate template = templateRepository.findById(id)
+    public ResponseEntity<Template> updateTemplate(@PathVariable UUID id, @Valid @RequestBody TemplateRequest request) {
+        Template template = templateRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
         template.setName(request.getName());
         template.setDescription(request.getDescription());

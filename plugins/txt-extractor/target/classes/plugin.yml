@@ -1,0 +1,8 @@
+plugin:
+  id: txt-extractor
+  name: "TXT 采样"
+  description: "从纯文本文件中采样提取内容片段，供后续节点分析"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.processing.TxtExtractorNode

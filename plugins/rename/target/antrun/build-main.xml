@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="maven-antrun-" default="main">
+  <target name="main">
+    <mkdir dir="/Users/my/Documents/Project/Java/unified-media-cms/plugins/rename/dist" />
+    <copy flatten="true" todir="/Users/my/Documents/Project/Java/unified-media-cms/plugins/rename/dist">
+      <fileset dir="/Users/my/Documents/Project/Java/unified-media-cms/plugins/rename">
+        <include name="**/target/*.jar" />
+        <exclude name="**/target/*-sources.jar" />
+        <exclude name="**/target/original-*.jar" />
+      </fileset>
+    </copy>
+    <echo message="所有插件已聚合至: /Users/my/Documents/Project/Java/unified-media-cms/plugins/rename/dist" />
+  </target>
+</project>

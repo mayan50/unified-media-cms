@@ -13,7 +13,7 @@ export const useTaskStore = defineStore('task', () => {
       const params: any = {}
       if (status) params.status = status
       const { data } = await getTasks(params)
-      tasks.value = data
+      tasks.value = data.items || data
     } finally {
       loading.value = false
     }

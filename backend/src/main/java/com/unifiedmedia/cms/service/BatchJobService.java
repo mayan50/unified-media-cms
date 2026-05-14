@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unifiedmedia.cms.entity.*;
 import com.unifiedmedia.cms.pipeline.core.*;
+import com.unifiedmedia.cms.plugin.NodeRegistry;
 import com.unifiedmedia.cms.pipeline.payload.FileCandidate;
 import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
 import com.unifiedmedia.cms.pipeline.spi.PipelineEventListener;
 import com.unifiedmedia.cms.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +27,7 @@ import java.util.concurrent.Executor;
 @RequiredArgsConstructor
 public class BatchJobService {
 
-    private final List<PipelineNode> allNodes;
+    private final NodeRegistry nodeRegistry;
     private final BatchJobRepository jobRepository;
     private final TaskRepository taskRepository;
     private final TemplateRepository templateRepository;
@@ -34,6 +36,7 @@ public class BatchJobService {
     private final List<PipelineEventListener> eventListeners;
 
     private final FileTaskExecutor fileTaskExecutor;
+    @Qualifier("pipelineTaskExecutor")
     private final Executor pipelineTaskExecutor;
     private final TransactionTemplate transactionTemplate;
 
@@ -43,7 +46,10 @@ public class BatchJobService {
     private record ParsedGraph(List<Map<String, Object>> nodes, List<Map<String, Object>> edges, List<String> sorted) {}
 
     private Map<String, PipelineNode> getNodeMap() {
-        if (nodeMap.isEmpty()) for (PipelineNode n : allNodes) nodeMap.put(n.getNodeName(), n);
+        if (nodeMap.isEmpty() || nodeMap.size() != nodeRegistry.getNodes().size()) {
+            nodeMap.clear();
+            for (PipelineNode n : nodeRegistry.getNodes()) nodeMap.put(n.getNodeName(), n);
+        }
         return nodeMap;
     }
 
@@ -389,5 +395,5 @@ public class BatchJobService {
     }
 
     public Optional<BatchJob> getJob(UUID id) { return jobRepository.findById(id); }
-    public List<PipelineNode> getAvailableNodes() { return allNodes; }
+    public List<PipelineNode> getAvailableNodes() { return List.copyOf(nodeRegistry.getNodes()); }
 }

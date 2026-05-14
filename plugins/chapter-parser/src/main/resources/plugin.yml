@@ -1,0 +1,8 @@
+plugin:
+  id: chapter-parser
+  name: "章节解析"
+  description: "从TXT文本中智能提取书名、作者和章节目录"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.parser.ChapterParserNode

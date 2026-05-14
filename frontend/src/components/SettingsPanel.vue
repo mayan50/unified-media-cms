@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { getStorageNodes, createStorageNode, deleteStorageNode, getLlmConfig, saveLlmConfig } from '../api/modules'
 import { useToast } from '../composables/useToast'
+import api from '../api/index'
 
 const { toast } = useToast()
 
@@ -86,9 +87,23 @@ async function saveLlmConfigAction() {
   }
 }
 
+// ── Plugin management ──
+const plugins = ref<any[]>([])
+const pluginsLoading = ref(false)
+async function fetchPlugins() {
+  pluginsLoading.value = true
+  try { const { data } = await api.get('/plugins'); plugins.value = data || [] }
+  finally { pluginsLoading.value = false }
+}
+async function reloadPlugins() {
+  try { await api.post('/plugins/reload'); toast.success('热重载完成'); fetchPlugins() }
+  catch { toast.error('重载失败') }
+}
+
 onMounted(() => {
   fetchStorageNodes()
   fetchLlmConfig()
+  fetchPlugins()
 })
 </script>
 
@@ -177,6 +192,29 @@ onMounted(() => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Plugin Management -->
+    <div class="settings-section">
+      <div class="section-header">
+        <h3>节点插件</h3>
+        <v-btn color="primary" size="small" prepend-icon="mdi-refresh" :loading="pluginsLoading" @click="reloadPlugins">
+          扫描并热重载
+        </v-btn>
+      </div>
+      <v-progress-linear v-if="pluginsLoading" indeterminate color="primary" class="mb-4" />
+      <v-list v-if="plugins.length" density="compact" bg-color="surface" rounded>
+        <v-list-item v-for="p in plugins" :key="p.pluginId">
+          <template #prepend>
+            <v-chip size="x-small" color="success" variant="tonal">运行中</v-chip>
+          </template>
+          <v-list-item-title><code>{{ p.pluginId }}</code></v-list-item-title>
+          <v-list-item-subtitle>{{ p.nodeCount }} 个节点：{{ (p.nodeNames || []).join(', ') }}</v-list-item-subtitle>
+        </v-list-item>
+      </v-list>
+      <div v-if="!plugins.length && !pluginsLoading" class="text-caption text-disabled text-center py-4">
+        暂无外部插件
+      </div>
+    </div>
   </div>
 </template>
 

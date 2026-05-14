@@ -14,6 +14,33 @@ const router = createRouter({
       component: () => import('../views/AssetDetailView.vue'),
     },
     {
+      path: '/settings',
+      component: () => import('../views/SettingsLayout.vue'),
+      redirect: '/settings/storage',
+      children: [
+        {
+          path: 'storage',
+          name: 'SettingsStorage',
+          component: () => import('../views/SettingsStorageView.vue'),
+        },
+        {
+          path: 'llm',
+          name: 'SettingsLlm',
+          component: () => import('../views/SettingsLlmView.vue'),
+        },
+        {
+          path: 'categories-tags',
+          name: 'SettingsCategoriesTags',
+          component: () => import('../views/SettingsCategoriesTagsView.vue'),
+        },
+        {
+          path: 'plugins',
+          name: 'SettingsPlugins',
+          component: () => import('../views/SettingsPluginView.vue'),
+        },
+      ],
+    },
+    {
       path: '/workshop',
       name: 'Workshop',
       component: () => import('../views/WorkshopLayout.vue'),
@@ -42,7 +69,7 @@ const router = createRouter({
         {
           path: 'records/:id',
           name: 'RecordDetail',
-          component: () => import('../views/TaskDetailView.vue'),
+          component: () => import('../views/TaskRecordDetailView.vue'),
         },
       ],
     },

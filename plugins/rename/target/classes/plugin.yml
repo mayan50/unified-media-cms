@@ -1,0 +1,8 @@
+plugin:
+  id: rename
+  name: "重命名"
+  description: "根据元数据自动生成规范文件名（作者 - 标题）"
+  version: "1.0"
+  provider: UnifiedMedia
+  nodes:
+    - class: com.unifiedmedia.cms.pipeline.nodes.control.RenameNode
