@@ -84,7 +84,7 @@ public class BatchJobController {
     }
 
     @PostMapping("/validate-graph")
-    public ResponseEntity<Map<String, Object>> validateGraph(@RequestBody String graphJson) {
+    public ResponseEntity<Map<String, Object>> validateGraph(@RequestBody Map<String, Object> graphJson) {
         try {
             PipelineGraphParser.DagResult result = graphParser.parseAndValidate(graphJson);
             return ResponseEntity.ok(Map.of("status", "OK", "message", "图结构合法，无死循环",

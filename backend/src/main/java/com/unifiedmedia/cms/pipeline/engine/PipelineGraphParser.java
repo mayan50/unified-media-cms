@@ -1,22 +1,16 @@
 package com.unifiedmedia.cms.pipeline.engine;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 /**
- * 管线 DAG 图解析器 — 解析 JSON 图定义，执行 Kahn 拓扑排序，检测死循环。
+ * 管线 DAG 图解析器 — 接收已反序列化的 Map 图定义，执行 Kahn 拓扑排序，检测死循环。
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class PipelineGraphParser {
-
-    private final ObjectMapper objectMapper;
 
     public record DagResult(List<Map<String, Object>> nodes, List<Map<String, Object>> edges, List<String> sorted) {}
 
@@ -25,24 +19,16 @@ public class PipelineGraphParser {
      *
      * @throws IllegalStateException 如果图中检测到死循环
      */
-    public DagResult parseAndValidate(String graphJson) {
-        Map<String, Object> g = parseGraph(graphJson);
-        if (g == null) throw new IllegalArgumentException("无效的图结构 JSON");
+    @SuppressWarnings("unchecked")
+    public DagResult parseAndValidate(Map<String, Object> graph) {
+        if (graph == null || graph.isEmpty()) throw new IllegalArgumentException("无效的图结构");
 
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> nodes = (List<Map<String, Object>>) g.get("nodes");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> edges = (List<Map<String, Object>>) g.get("edges");
+        List<Map<String, Object>> nodes = (List<Map<String, Object>>) graph.get("nodes");
+        List<Map<String, Object>> edges = (List<Map<String, Object>>) graph.get("edges");
         if (nodes == null || nodes.isEmpty()) throw new IllegalArgumentException("图中没有节点");
 
         List<String> sorted = topoSort(nodes, edges != null ? edges : List.of());
         return new DagResult(nodes, edges != null ? edges : List.of(), sorted);
-    }
-
-    private Map<String, Object> parseGraph(String s) {
-        if (s == null || s.isBlank()) return null;
-        try { return objectMapper.readValue(s, new TypeReference<>() {}); }
-        catch (Exception e) { log.error("parse graph failed", e); return null; }
     }
 
     /**

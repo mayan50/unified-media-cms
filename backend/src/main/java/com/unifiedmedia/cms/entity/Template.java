@@ -1,15 +1,12 @@
 package com.unifiedmedia.cms.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -19,8 +16,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Template {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -32,10 +27,9 @@ public class Template {
     @Column
     private String description;
 
-    @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "graph_payload", nullable = false, columnDefinition = "jsonb")
-    private String graphPayload;
+    private Map<String, Object> graphPayload;
 
     @Column(name = "is_default")
     @Builder.Default
@@ -46,13 +40,6 @@ public class Template {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @JsonProperty("graphPayload")
-    public Object getGraphPayloadParsed() {
-        if (graphPayload == null) return null;
-        try { return MAPPER.readValue(graphPayload, new TypeReference<>() {}); }
-        catch (Exception e) { return graphPayload; }
-    }
 
     @PrePersist
     void prePersist() {

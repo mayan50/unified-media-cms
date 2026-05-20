@@ -59,8 +59,8 @@ public class BatchJobService {
 
         Template t = (templateId != null) ? templateRepository.findById(templateId).orElseThrow()
                 : templateRepository.findByIsDefaultTrue().orElseThrow(() -> new IllegalArgumentException("没有默认模板"));
-        String graph = t.getGraphPayload();
-        if (graph == null || graph.isBlank()) throw new IllegalArgumentException("模板无 graph_payload");
+        Map<String, Object> graph = t.getGraphPayload();
+        if (graph == null || graph.isEmpty()) throw new IllegalArgumentException("模板无 graph_payload");
         graphParser.parseAndValidate(graph); // 提交时强制校验，防死循环恶意发包
 
         BatchJob job = BatchJob.builder().name(jobName).templateId(t.getId()).status("PENDING").executionGraph(graph).build();

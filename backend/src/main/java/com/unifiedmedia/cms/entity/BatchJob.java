@@ -1,9 +1,5 @@
 package com.unifiedmedia.cms.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -21,8 +17,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class BatchJob {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -37,22 +31,19 @@ public class BatchJob {
     @Builder.Default
     private String status = "PENDING";
 
-    @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "execution_graph", nullable = false, columnDefinition = "jsonb")
-    private String executionGraph;
+    private Map<String, Object> executionGraph;
 
     @Column(name = "input_storage_node_id")
     private UUID inputStorageNodeId;
 
-    @JsonIgnore
     @Column(name = "input_path")
     private String inputPathText;
 
     @Column(name = "output_storage_node_id")
     private UUID outputStorageNodeId;
 
-    @JsonIgnore
     @Column(name = "output_path")
     private String outputPathText;
 
@@ -61,27 +52,6 @@ public class BatchJob {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @JsonProperty("executionGraph")
-    public Object getExecutionGraphParsed() {
-        if (executionGraph == null) return null;
-        try { return MAPPER.readValue(executionGraph, new TypeReference<>() {}); }
-        catch (Exception e) { return executionGraph; }
-    }
-
-    @JsonProperty("inputPath")
-    public Object getInputPath() {
-        if (inputStorageNodeId == null && inputPathText == null) return null;
-        return Map.of("storage_node_id", inputStorageNodeId != null ? inputStorageNodeId.toString() : "",
-                      "path", inputPathText != null ? inputPathText : "");
-    }
-
-    @JsonProperty("outputPath")
-    public Object getOutputPath() {
-        if (outputStorageNodeId == null && outputPathText == null) return null;
-        return Map.of("storage_node_id", outputStorageNodeId != null ? outputStorageNodeId.toString() : "",
-                      "path", outputPathText != null ? outputPathText : "");
-    }
 
     @PrePersist
     void prePersist() {

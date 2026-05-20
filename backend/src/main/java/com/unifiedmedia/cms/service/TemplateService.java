@@ -1,6 +1,5 @@
 package com.unifiedmedia.cms.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unifiedmedia.cms.dto.TemplateRequest;
 import com.unifiedmedia.cms.entity.Template;
 import com.unifiedmedia.cms.repository.TemplateRepository;
@@ -17,7 +16,6 @@ import java.util.UUID;
 public class TemplateService {
 
     private final TemplateRepository templateRepository;
-    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public List<Template> listTemplates() {
@@ -34,7 +32,7 @@ public class TemplateService {
         Template template = Template.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .graphPayload(toJson(request.getGraphPayload()))
+                .graphPayload(request.getGraphPayload())
                 .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
                 .build();
         return templateRepository.save(template);
@@ -46,7 +44,7 @@ public class TemplateService {
                 .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
         template.setName(request.getName());
         template.setDescription(request.getDescription());
-        template.setGraphPayload(toJson(request.getGraphPayload()));
+        template.setGraphPayload(request.getGraphPayload());
         if (request.getIsDefault() != null) template.setIsDefault(request.getIsDefault());
         return templateRepository.save(template);
     }
@@ -54,12 +52,5 @@ public class TemplateService {
     @Transactional
     public void deleteTemplate(UUID id) {
         templateRepository.deleteById(id);
-    }
-
-    private String toJson(Object value) {
-        if (value == null) return null;
-        if (value instanceof String s) return s;
-        try { return objectMapper.writeValueAsString(value); }
-        catch (Exception e) { return null; }
     }
 }
