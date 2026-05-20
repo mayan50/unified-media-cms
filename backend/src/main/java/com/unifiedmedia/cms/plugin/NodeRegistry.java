@@ -1,5 +1,6 @@
 package com.unifiedmedia.cms.plugin;
 
+import com.unifiedmedia.cms.pipeline.core.NodeMetaReader;
 import com.unifiedmedia.cms.pipeline.core.PipelineNode;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,7 +21,7 @@ public class NodeRegistry {
 
     /** 注册单个节点 */
     public void register(String pluginId, PipelineNode node) {
-        String nodeName = node.getNodeName();
+        String nodeName = NodeMetaReader.getNodeName(node);
 
         if (builtInNodes.containsKey(nodeName)) {
             log.error("[安全拦截] 插件 '{}' 试图劫持系统内置核心节点: {}", pluginId, nodeName);
@@ -72,8 +73,8 @@ public class NodeRegistry {
 
     /** 注册内置节点（启动时调用，不支持卸载） */
     public void registerBuiltIn(PipelineNode node) {
-        builtInNodes.put(node.getNodeName(), node);
-        nodes.put(node.getNodeName(), node);
+        builtInNodes.put(NodeMetaReader.getNodeName(node), node);
+        nodes.put(NodeMetaReader.getNodeName(node), node);
     }
 
     /** 获取所有活跃节点 */
@@ -94,7 +95,7 @@ public class NodeRegistry {
     /** 节点名 → 标签 */
     public Map<String, String> getNodeLabels() {
         Map<String, String> labels = new LinkedHashMap<>();
-        nodes.forEach((name, node) -> labels.put(name, node.getNodeLabel()));
+        nodes.forEach((name, node) -> labels.put(name, NodeMetaReader.getNodeLabel(node)));
         return labels;
     }
 }

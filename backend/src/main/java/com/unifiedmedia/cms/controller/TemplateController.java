@@ -1,9 +1,8 @@
 package com.unifiedmedia.cms.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unifiedmedia.cms.dto.TemplateRequest;
 import com.unifiedmedia.cms.entity.Template;
-import com.unifiedmedia.cms.repository.TemplateRepository;
+import com.unifiedmedia.cms.service.TemplateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,56 +16,33 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TemplateController {
 
-    private final TemplateRepository templateRepository;
-    private final ObjectMapper objectMapper;
+    private final TemplateService templateService;
 
     @GetMapping
     public ResponseEntity<List<Template>> listTemplates() {
-        return ResponseEntity.ok(templateRepository.findAll());
+        return ResponseEntity.ok(templateService.listTemplates());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Template> getTemplate(@PathVariable UUID id) {
-        return templateRepository.findById(id)
+        return templateService.getTemplate(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<Template> createTemplate(@Valid @RequestBody TemplateRequest request) {
-        Template template = Template.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .graphPayload(serializeJson(request.getGraphPayload()))
-                .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
-                .build();
-        return ResponseEntity.ok(templateRepository.save(template));
+        return ResponseEntity.ok(templateService.createTemplate(request));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Template> updateTemplate(@PathVariable UUID id, @Valid @RequestBody TemplateRequest request) {
-        Template template = templateRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Template not found: " + id));
-        template.setName(request.getName());
-        template.setDescription(request.getDescription());
-        template.setGraphPayload(serializeJson(request.getGraphPayload()));
-        if (request.getIsDefault() != null) template.setIsDefault(request.getIsDefault());
-        return ResponseEntity.ok(templateRepository.save(template));
+        return ResponseEntity.ok(templateService.updateTemplate(id, request));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTemplate(@PathVariable UUID id) {
-        templateRepository.deleteById(id);
+        templateService.deleteTemplate(id);
         return ResponseEntity.noContent().build();
-    }
-
-    private String serializeJson(Object value) {
-        if (value == null) return null;
-        if (value instanceof String s) return s;
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

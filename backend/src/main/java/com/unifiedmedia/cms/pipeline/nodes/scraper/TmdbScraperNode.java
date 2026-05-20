@@ -1,6 +1,6 @@
 package com.unifiedmedia.cms.pipeline.nodes.scraper;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 
-import com.unifiedmedia.cms.entity.Asset;
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 
 @Slf4j
+@NodeDef(name = "TmdbScraperNode", label = "TMDB 刮削", icon = "🎥", type = NodeType.PROCESSING)
 public class TmdbScraperNode extends BaseProcessingNode {
 
     public TmdbScraperNode() {
@@ -19,13 +20,13 @@ public class TmdbScraperNode extends BaseProcessingNode {
 
     @Override
     public boolean canExecute(TaskContext context) {
-        Asset asset = context.getAsset();
-        return asset != null && asset.getTitle() != null && !asset.getTitle().isBlank();
+        AssetDraft draft = context.getAssetDraft();
+        return draft != null && draft.getTitle() != null && !draft.getTitle().isBlank();
     }
 
     @Override
     public void execute(TaskContext context) throws ArbitrationRequiredException {
-        String title = context.getAsset().getTitle();
+        String title = context.getAssetDraft().getTitle();
         log.info("[TmdbScraperNode] Searching TMDB for: {}", title);
         // TODO: TMDB API integration
         List<ScrapeCandidate> candidates = new ArrayList<>();

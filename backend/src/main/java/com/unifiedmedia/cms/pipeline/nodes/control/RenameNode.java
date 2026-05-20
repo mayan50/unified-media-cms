@@ -1,4 +1,5 @@
 package com.unifiedmedia.cms.pipeline.nodes.control;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
@@ -7,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 @Slf4j
+@NodeDef(name = "RenameNode", label = "重命名", icon = "✏️", type = NodeType.PROCESSING)
 public class RenameNode extends BaseProcessingNode {
 
     public RenameNode() {
@@ -18,13 +20,13 @@ public class RenameNode extends BaseProcessingNode {
 
     @Override
     public boolean canExecute(TaskContext context) {
-        String title = context.getAsset() != null ? context.getAsset().getTitle() : null;
+        String title = context.getAssetDraft() != null ? context.getAssetDraft().getTitle() : null;
         return title != null && !title.isBlank();
     }
 
     @Override
     public void execute(TaskContext context) {
-        String title = context.getAsset() != null ? context.getAsset().getTitle() : null;
+        String title = context.getAssetDraft() != null ? context.getAssetDraft().getTitle() : null;
         String author = context.getPipelineData(PipelineKeys.AUTHORS, String.class);
         String newName = (author != null ? author + " - " : "") + title;
         context.setPipelineData(PipelineKeys.RENAMED_TITLE, newName);

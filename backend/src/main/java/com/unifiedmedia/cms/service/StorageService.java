@@ -2,6 +2,7 @@ package com.unifiedmedia.cms.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unifiedmedia.cms.entity.StorageNode;
+import com.unifiedmedia.cms.pipeline.core.VfsFile;
 import com.unifiedmedia.cms.repository.StorageNodeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ public class StorageService {
 
     private final StorageNodeRepository storageNodeRepository;
     private final ObjectMapper objectMapper;
+    private final StorageAdapterRegistry adapterRegistry;
 
     @Transactional(readOnly = true)
     public List<StorageNode> getAllNodes() {
@@ -56,18 +58,10 @@ public class StorageService {
         storageNodeRepository.deleteById(id);
     }
 
-    @SuppressWarnings("unchecked")
-    public String resolveAbsolutePath(StorageNode node, String relativePath) {
-        if (!"LOCAL".equals(node.getProviderType())) {
-            throw new UnsupportedOperationException("Only LOCAL storage is supported in V1 for absolute path resolution");
-        }
-        try {
-            Map<String, Object> config = objectMapper.readValue(node.getConnectionConfig(), Map.class);
-            String basePath = (String) config.get("basePath");
-            return basePath + "/" + relativePath;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse storage node config", e);
-        }
+    @Transactional(readOnly = true)
+    public List<VfsFile> browseNode(UUID nodeId, String path) {
+        StorageNode node = getNode(nodeId);
+        return adapterRegistry.getAdapter(node.getProviderType()).listFiles(node, path);
     }
 
     private String serializeJson(Object value) {

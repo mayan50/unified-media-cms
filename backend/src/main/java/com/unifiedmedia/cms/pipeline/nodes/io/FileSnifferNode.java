@@ -1,7 +1,8 @@
 package com.unifiedmedia.cms.pipeline.nodes.io;
 
 import com.unifiedmedia.cms.pipeline.core.*;
-import com.unifiedmedia.cms.pipeline.payload.FileCandidate;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
+import com.unifiedmedia.cms.pipeline.core.VfsFile;
 import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
 import lombok.extern.slf4j.Slf4j;
 
@@ -11,11 +12,14 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
 @Slf4j
+@NodeDef(name = FileSnifferNode.NODE_NAME, label = "文件嗅探", icon = "🔍", type = NodeType.INPUT, description = "扫描源目录，探测所有文件 MIME 类型")
 public class FileSnifferNode extends BaseInputNode {
 
+    public static final String NODE_NAME = "FileSnifferNode";
+
     public FileSnifferNode() {
-        super("FileSnifferNode", "文件嗅探", "🔍",
-                "扫描源目录，探测所有文件 MIME 类型，产生 FileCandidate 列表。不污染全局上下文。",
+        super(NODE_NAME, "文件嗅探", "🔍",
+                "扫描源目录，探测所有文件 MIME 类型，产生 VfsFile 列表。不污染全局上下文。",
                 List.of(),
                 List.of());
     }
@@ -42,17 +46,21 @@ public class FileSnifferNode extends BaseInputNode {
         if (!Files.exists(dir) || !Files.isDirectory(dir)) {
             throw new IOException("Source directory not found: " + sourceDir);
         }
-        List<FileCandidate> candidates = new ArrayList<>();
+        List<VfsFile> candidates = new ArrayList<>();
         Files.walkFileTree(dir, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 String mimeType = probeMimeType(file);
                 String format = mimeToFormat(mimeType, file.toString());
-                candidates.add(new FileCandidate(
-                        file.toAbsolutePath().toString(),
-                        dir.relativize(file).toString(),
-                        mimeType,
-                        format));
+                candidates.add(VfsFile.builder()
+                        .remotePath(file.toAbsolutePath().toString())
+                        .fileName(dir.relativize(file).toString())
+                        .mimeType(mimeType)
+                        .format(MediaFormat.fromMimeType(mimeType))
+                        .size(attrs.size())
+                        .creationTime(attrs.creationTime().toMillis())
+                        .lastModifiedTime(attrs.lastModifiedTime().toMillis())
+                        .build());
                 return FileVisitResult.CONTINUE;
             }
             @Override
@@ -67,7 +75,7 @@ public class FileSnifferNode extends BaseInputNode {
         }
         context.addLog("ok", "扫描完成: 发现 " + candidates.size() + " 个文件");
         log.info("[FileSnifferNode] Scanned directory: {}, found {} files, first format={}",
-                sourceDir, candidates.size(), candidates.isEmpty() ? "N/A" : candidates.get(0).format());
+                sourceDir, candidates.size(), candidates.isEmpty() ? "N/A" : candidates.get(0).getFormat());
     }
 
     private void sniffSingleFile(TaskContext context) throws IOException {
@@ -77,10 +85,12 @@ public class FileSnifferNode extends BaseInputNode {
         if (!Files.exists(filePath)) throw new IOException("File not found: " + path);
         String mimeType = probeMimeType(filePath);
         String format = mimeToFormat(mimeType, path);
-        List<FileCandidate> candidates = List.of(new FileCandidate(
-                filePath.toAbsolutePath().toString(),
-                filePath.getFileName().toString(),
-                mimeType, format));
+        List<VfsFile> candidates = List.of(VfsFile.builder()
+                .remotePath(filePath.toAbsolutePath().toString())
+                .fileName(filePath.getFileName().toString())
+                .mimeType(mimeType)
+                .format(MediaFormat.fromMimeType(mimeType))
+                .build());
         context.setPipelineData(PipelineKeys.FILE_CANDIDATES, candidates);
         context.addLog("ok", "文件嗅探: MIME=" + mimeType + ", 格式=" + format);
         log.info("[FileSnifferNode] Single file: mimeType={}, format={}, path={}", mimeType, format, path);

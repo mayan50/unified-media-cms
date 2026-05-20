@@ -1,4 +1,5 @@
 package com.unifiedmedia.cms.pipeline.nodes.parser;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
@@ -14,7 +15,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 @Slf4j
-public class EpubMetaParserNode extends BaseProcessingNode {
+@NodeDef(name = "EpubMetaParserNode", label = "EPUB 解析", icon = "📖", type = NodeType.PROCESSING)
+public class EpubMetaParserNode extends BaseProcessingNode implements EntityDataOperator {
 
     private static final Pattern TITLE_PATTERN = Pattern.compile("<dc:title[^>]*>([^<]+)</dc:title>", Pattern.CASE_INSENSITIVE);
     private static final Pattern CREATOR_PATTERN = Pattern.compile("<dc:creator[^>]*>([^<]+)</dc:creator>", Pattern.CASE_INSENSITIVE);
@@ -52,7 +54,7 @@ public class EpubMetaParserNode extends BaseProcessingNode {
             }
         }
         context.setPipelineData(PipelineKeys.EPUB_METADATA, metadata);
-        if (metadata.containsKey("title")) context.getAsset().updateTitle((String) metadata.get("title"));
+        if (metadata.containsKey("title")) context.getAssetDraft().setTitle((String) metadata.get("title"));
         if (metadata.containsKey("creator")) {
             Object creator = metadata.get("creator");
             if (creator instanceof String s && !s.isBlank()) {
@@ -60,7 +62,7 @@ public class EpubMetaParserNode extends BaseProcessingNode {
                 setIntentIfUnlocked(context, "authors", PipelineKeys.AUTHORS, authors);
             }
         }
-        if (metadata.containsKey("description")) context.getAsset().updateSummary((String) metadata.get("description"));
+        if (metadata.containsKey("description")) context.getAssetDraft().setSummary((String) metadata.get("description"));
         context.addLog("ok", "EPUB元数据: 标题=" + metadata.getOrDefault("title", "无")
                 + ", 作者=" + metadata.getOrDefault("creator", "无"));
         log.info("[EpubMetaParserNode] Parsed metadata: {}", metadata);

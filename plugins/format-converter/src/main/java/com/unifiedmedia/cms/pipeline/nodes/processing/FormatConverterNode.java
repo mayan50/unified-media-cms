@@ -1,5 +1,7 @@
 package com.unifiedmedia.cms.pipeline.nodes.processing;
 
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
+
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Slf4j
+@NodeDef(name = "FormatConverterNode", label = "TXT→EPUB", icon = "🔄", type = NodeType.PROCESSING)
 public class FormatConverterNode extends BaseProcessingNode {
 
     public FormatConverterNode() {
@@ -31,7 +34,7 @@ public class FormatConverterNode extends BaseProcessingNode {
     @Override
     public void execute(TaskContext context) throws IOException {
         log.info("[FormatConverterNode] Converting TXT to EPUB");
-        String assetTitle = context.getAsset() != null ? context.getAsset().getTitle() : null;
+        String assetTitle = context.getAssetDraft() != null ? context.getAssetDraft().getTitle() : null;
         String title = assetTitle != null ? assetTitle : "Unknown Title";
 
         // Read authors as list
@@ -39,7 +42,7 @@ public class FormatConverterNode extends BaseProcessingNode {
         String author = !authors.isEmpty() ? String.join(", ", authors) : "Unknown Author";
 
         // Read summary from asset
-        String summary = context.getAsset() != null ? context.getAsset().getSummary() : "";
+        String summary = context.getAssetDraft() != null ? context.getAssetDraft().getSummary() : "";
         if (summary != null && !summary.isBlank()) {
             title = title + (summary.length() > 50 ? " - " + summary.substring(0, 50) : "");
         }

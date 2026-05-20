@@ -18,7 +18,8 @@ public abstract class BaseProcessingNode extends AbstractPipelineNode {
      * 用于刮削节点产出集合意图（authors/tags），由 ArchiveNode 的 RelationMerger 消费。
      */
     protected void setIntentIfUnlocked(TaskContext ctx, String fieldName, String pipelineKey, Object value) {
-        if (!ctx.getAsset().isFieldLocked(fieldName)) {
+        AssetDraft draft = ctx.getAssetDraft();
+        if (draft != null && !draft.isFieldLocked(fieldName)) {
             ctx.setPipelineData(pipelineKey, value);
         }
     }

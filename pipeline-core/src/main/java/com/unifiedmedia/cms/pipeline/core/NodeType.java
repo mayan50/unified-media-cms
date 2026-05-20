@@ -11,7 +11,8 @@ public enum NodeType {
     INPUT("数据输入", "📥"),
     PROCESSING("数据处理", "⚙️"),
     OUTPUT("数据输出", "📤"),
-    FLOW_CONTROL("流程控制", "🔀");
+    FLOW_CONTROL("流程控制", "🔀"),
+    SYSTEM("系统级", "🔧");
 
     private final String label;
     private final String icon;

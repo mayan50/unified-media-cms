@@ -1,44 +1,48 @@
 package com.unifiedmedia.cms.pipeline.core;
 
-import com.unifiedmedia.cms.entity.Asset;
-import com.unifiedmedia.cms.entity.MediaDetail;
-
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
- * 节点执行上下文 — 节点通过此接口获取资产数据、管道中间数据和日志能力。
+ * 流水线节点执行上下文 — 纯数据总线接口。
  * <p>
- * 节点不应持有 Repository 或其他基础设施依赖，只操作此上下文中的领域对象。
+ * 节点通过此接口获取系统元数据、读写临时数据、操作资产草稿及收集日志。
+ * 严禁在此接口中出现任何 JPA {@code @Entity} 类型。
  */
 public interface TaskContext {
 
+    // ── 系统元数据 ──
+
     UUID getTaskId();
-    Asset getAsset();
+    UUID getAssetId();
 
-    /** 获取媒体详情（可能为 null，节点应使用 getOrCreateDetail） */
-    <T extends MediaDetail> T getDetail(Class<T> type);
+    // ── 草稿访问 ──
 
-    /** 按需获取或创建媒体详情，factory 负责构建新实例 */
-    <T extends MediaDetail> T getOrCreateDetail(Class<T> type, Supplier<T> factory);
+    AssetDraft getAssetDraft();
+    void setAssetDraft(AssetDraft draft);
 
-    // ── 管道中间数据 ──
+    MediaDetailDraft getDetailDraft();
+    void setDetailDraft(MediaDetailDraft draft);
 
-    /** Type-safe scalar access (replaces old getPipelineData without Class param) */
+    // ── 临时数据总线（仅放入库的计算废料）──
+
     <T> T getPipelineData(String key, Class<T> type);
     void setPipelineData(String key, Object value);
 
-    /** Type-safe list access (replaces all @SuppressWarnings casts) */
+    @SuppressWarnings("unchecked")
     <T> List<T> getPipelineList(String key, Class<T> elementType);
 
-    // ── 日志 ──
+    default boolean hasPipelineData(String key) {
+        return getPipelineData(key, Object.class) != null;
+    }
+
+    // ── 日志收集 ──
 
     void addLog(String level, String message);
     List<String> drainLogs();
 
-    /** Backward compat (keep hasPipelineData) */
-    default boolean hasPipelineData(String key) {
-        return getPipelineData(key, Object.class) != null;
-    }
+    // ── 错误收集 ──
+
+    void addError(String message);
+    List<String> getErrors();
 }

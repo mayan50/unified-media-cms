@@ -182,7 +182,6 @@ public class AssetService {
         return Map.of("success", true);
     }
 
-    @SuppressWarnings("unchecked")
     private Set<String> parseLockedFields(String lockedFieldsJson) {
         if (lockedFieldsJson == null || lockedFieldsJson.isBlank()) return Set.of();
         try {

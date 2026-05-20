@@ -14,6 +14,7 @@ public final class PipelineKeys {
     public static final String SOURCE_DIRECTORY = "sourceDirectory";
     public static final String STORAGE_NODE_ID = "storageNodeId";
     public static final String TARGET_PATH = "targetPath";
+    public static final String TEMP_SANDBOX_PATH = "tempSandboxPath";
 
     // ── 文件探测 ──
     public static final String DETECTED_FORMAT = "detectedFormat";

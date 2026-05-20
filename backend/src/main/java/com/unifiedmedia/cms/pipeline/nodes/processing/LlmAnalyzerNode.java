@@ -1,4 +1,5 @@
 package com.unifiedmedia.cms.pipeline.nodes.processing;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,7 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import java.util.*;
 
 @Slf4j
-public class LlmAnalyzerNode extends BaseProcessingNode {
+@NodeDef(name = "LlmAnalyzerNode", label = "大模型分析", icon = "🤖", type = NodeType.PROCESSING)
+public class LlmAnalyzerNode extends BaseProcessingNode implements EntityDataOperator {
 
     private final ObjectMapper objectMapper;
     private final OllamaChatModel ollamaChatModel;
@@ -59,7 +61,7 @@ public class LlmAnalyzerNode extends BaseProcessingNode {
         log.info("[LlmAnalyzerNode] Raw LLM response: {}", response);
         Map<String, Object> result = parseLlmResponse(response);
         if (result.containsKey("title") && result.get("title") != null)
-            context.getAsset().updateTitle((String) result.get("title"));
+            context.getAssetDraft().setTitle((String) result.get("title"));
         if (result.containsKey("author") && result.get("author") instanceof String s && !s.isBlank()) {
             Object authorObj = result.get("author");
             List<String> authors = authorObj instanceof List<?> l ? l.stream().map(Object::toString).toList()
@@ -71,8 +73,8 @@ public class LlmAnalyzerNode extends BaseProcessingNode {
             setIntentIfUnlocked(context, "tags", PipelineKeys.TAGS, tags);
         }
         if (result.containsKey("summary") && result.get("summary") != null)
-            context.getAsset().updateSummary((String) result.get("summary"));
-        String aiTitle = context.getAsset() != null ? context.getAsset().getTitle() : null;
+            context.getAssetDraft().setSummary((String) result.get("summary"));
+        String aiTitle = context.getAssetDraft() != null ? context.getAssetDraft().getTitle() : null;
         List<String> aiAuthorList = context.getPipelineList(PipelineKeys.AUTHORS, String.class);
         String aiAuthor = (aiAuthorList != null && !aiAuthorList.isEmpty()) ? aiAuthorList.get(0) : null;
         List<String> aiTags = context.getPipelineList(PipelineKeys.TAGS, String.class);

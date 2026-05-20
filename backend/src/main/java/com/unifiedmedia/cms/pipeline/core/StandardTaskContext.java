@@ -8,12 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * TaskContext 默认实现 — 双层数据模型：
- * <ul>
- *   <li>globalData — 作业级全局只读配置（targetPath 等），构造时传入，不可修改</li>
- *   <li>localData  — 单文件私有读写黑板，所有 set 操作只影响 localData</li>
- * </ul>
- * 读取时降级：先查 local，未命中查 global。彻底消除跨文件数据污染。
+ * TaskContext 默认实现 — 双层数据模型。
+ * <p>
+ * 旧节点兼容：保留 {@link #getAsset()} 真实返回 JPA 实体。
+ * 新节点应使用 {@link PipelineTaskContext} + {@link AssetDraft}。
  */
 public class StandardTaskContext implements TaskContext {
 
@@ -23,6 +21,9 @@ public class StandardTaskContext implements TaskContext {
     private final Map<String, Object> globalData;
     private final Map<String, Object> localData = new ConcurrentHashMap<>();
     private final List<String> logs = new ArrayList<>();
+    private final List<String> errors = new ArrayList<>();
+    private AssetDraft assetDraft;
+    private MediaDetailDraft detailDraft;
 
     public StandardTaskContext(UUID taskId, Asset asset) {
         this(taskId, asset, null, Map.of());
@@ -43,15 +44,15 @@ public class StandardTaskContext implements TaskContext {
     public UUID getTaskId() { return taskId; }
 
     @Override
+    public UUID getAssetId() { return asset != null ? asset.getId() : null; }
+
     public Asset getAsset() { return asset; }
 
-    @Override
     public <T extends MediaDetail> T getDetail(Class<T> type) {
         if (type.isInstance(detail)) return type.cast(detail);
         return null;
     }
 
-    @Override
     public <T extends MediaDetail> T getOrCreateDetail(Class<T> type, Supplier<T> factory) {
         if (type.isInstance(detail)) return type.cast(detail);
         T newDetail = factory.get();
@@ -59,7 +60,17 @@ public class StandardTaskContext implements TaskContext {
         return newDetail;
     }
 
-    // ── 双层数据访问 ──
+    @Override
+    public AssetDraft getAssetDraft() { return assetDraft; }
+
+    @Override
+    public void setAssetDraft(AssetDraft draft) { this.assetDraft = draft; }
+
+    @Override
+    public MediaDetailDraft getDetailDraft() { return detailDraft; }
+
+    @Override
+    public void setDetailDraft(MediaDetailDraft draft) { this.detailDraft = draft; }
 
     @Override
     public <T> T getPipelineData(String key, Class<T> type) {
@@ -87,8 +98,6 @@ public class StandardTaskContext implements TaskContext {
         else localData.remove(key);
     }
 
-    // ── 日志 ──
-
     @Override
     public void addLog(String level, String message) {
         String prefix = switch (level) {
@@ -101,4 +110,10 @@ public class StandardTaskContext implements TaskContext {
     public List<String> drainLogs() {
         List<String> copy = new ArrayList<>(logs); logs.clear(); return copy;
     }
+
+    @Override
+    public void addError(String message) { errors.add(message); }
+
+    @Override
+    public List<String> getErrors() { return errors; }
 }

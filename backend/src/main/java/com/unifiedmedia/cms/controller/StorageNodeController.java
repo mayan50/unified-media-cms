@@ -2,16 +2,13 @@ package com.unifiedmedia.cms.controller;
 
 import com.unifiedmedia.cms.dto.StorageNodeRequest;
 import com.unifiedmedia.cms.entity.StorageNode;
+import com.unifiedmedia.cms.pipeline.core.VfsFile;
 import com.unifiedmedia.cms.service.StorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 @RestController
@@ -61,29 +58,21 @@ public class StorageNodeController {
     public ResponseEntity<List<Map<String, Object>>> browse(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "/") String path) {
-        StorageNode node = storageService.getNode(id);
-        String absolutePath = storageService.resolveAbsolutePath(node, path);
-
+        List<VfsFile> files = storageService.browseNode(id, path);
         List<Map<String, Object>> entries = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(absolutePath))) {
-            for (Path entry : stream) {
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("name", entry.getFileName().toString());
-                item.put("is_dir", Files.isDirectory(entry));
-                item.put("path", path.equals("/") ? "/" + entry.getFileName() : path + "/" + entry.getFileName());
-                entries.add(item);
-            }
-        } catch (Exception e) {
-            return ResponseEntity.ok(List.of());
+        for (VfsFile f : files) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("name", f.getFileName());
+            item.put("is_dir", f.isDirectory());
+            item.put("path", path.equals("/") ? "/" + f.getFileName() : path + "/" + f.getFileName());
+            entries.add(item);
         }
-
         entries.sort((a, b) -> {
             boolean aDir = (boolean) a.get("is_dir");
             boolean bDir = (boolean) b.get("is_dir");
             if (aDir != bDir) return aDir ? -1 : 1;
             return ((String) a.get("name")).compareToIgnoreCase((String) b.get("name"));
         });
-
         return ResponseEntity.ok(entries);
     }
 }

@@ -1,4 +1,5 @@
 package com.unifiedmedia.cms.pipeline.nodes.processing;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
@@ -9,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 @Slf4j
+@NodeDef(name = "TxtExtractorNode", label = "TXT 采样", icon = "📄", type = NodeType.PROCESSING)
 public class TxtExtractorNode extends BaseProcessingNode {
 
     private static final int MAX_CHARS = 3000;

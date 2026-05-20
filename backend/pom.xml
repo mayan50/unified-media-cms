@@ -23,6 +23,13 @@
     </properties>
 
     <dependencies>
+        <!-- Internal modules -->
+        <dependency>
+            <groupId>com.unifiedmedia.cms</groupId>
+            <artifactId>pipeline-core</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

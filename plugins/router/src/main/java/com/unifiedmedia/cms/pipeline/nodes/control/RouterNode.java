@@ -1,5 +1,7 @@
 package com.unifiedmedia.cms.pipeline.nodes.control;
 
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
+
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 @Slf4j
+@NodeDef(name = "RouterNode", label = "条件分支", icon = "🔀", type = NodeType.FLOW_CONTROL)
 public class RouterNode extends BaseFlowControlNode {
 
     public RouterNode() {

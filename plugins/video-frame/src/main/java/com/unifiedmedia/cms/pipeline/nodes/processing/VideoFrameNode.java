@@ -1,5 +1,7 @@
 package com.unifiedmedia.cms.pipeline.nodes.processing;
 
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
+
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 @Slf4j
+@NodeDef(name = "VideoFrameNode", label = "视频抽帧", icon = "🎬", type = NodeType.PROCESSING)
 public class VideoFrameNode extends BaseProcessingNode {
 
     public VideoFrameNode() {

@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface AssetCreatorRepository extends JpaRepository<AssetCreator, UUID> {
     List<AssetCreator> findByAssetId(UUID assetId);
     void deleteByAssetId(UUID assetId);
+    boolean existsByAssetIdAndCreatorIdAndRole(UUID assetId, UUID creatorId, String role);
 }

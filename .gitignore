@@ -22,3 +22,5 @@
 **/.DS_Store
 **/.idea
 **/.vscode
+/pipeline-core/target/
+/backend/target/

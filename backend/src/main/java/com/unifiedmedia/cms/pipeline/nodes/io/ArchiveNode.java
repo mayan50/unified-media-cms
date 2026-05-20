@@ -1,6 +1,7 @@
 package com.unifiedmedia.cms.pipeline.nodes.io;
 
 import com.unifiedmedia.cms.entity.*;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 import com.unifiedmedia.cms.repository.*;
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
@@ -13,7 +14,9 @@ import java.nio.file.Path;
 import java.util.*;
 
 @Slf4j
-public class ArchiveNode extends BaseOutputNode {
+@NodeDef(name = "ArchiveNode", label = "归档写入", icon = "📦", type = NodeType.OUTPUT,
+        description = "将处理完成的文件写入目标媒体库目录并入库")
+public class ArchiveNode extends BaseOutputNode implements EntityDataOperator {
 
     private final AssetRepository mediaAssetRepository;
     private final AssetFileRepository mediaFileRepository;
@@ -35,41 +38,28 @@ public class ArchiveNode extends BaseOutputNode {
 
     @Override
     public boolean canExecute(TaskContext context) {
-        Asset asset = context.getAsset();
-        return asset != null && asset.getTitle() != null && !asset.getTitle().isBlank();
+        AssetDraft draft = context.getAssetDraft();
+        return draft != null && draft.getTitle() != null && !draft.getTitle().isBlank();
     }
 
     @Override
     public void execute(TaskContext context) throws IOException {
-        Asset asset = context.getAsset();
-        if (asset == null) throw new IllegalStateException("Asset not found in context");
+        AssetDraft draft = context.getAssetDraft();
+        if (draft == null) throw new IllegalStateException("AssetDraft not found in context");
+        UUID assetId = context.getAssetId();
 
-        for (RelationMerger merger : relationMergers) {
-            merger.merge(context, asset);
-        }
-
-        mediaAssetRepository.save(asset);
-        context.addLog("ok", "保存资产: " + asset.getId());
-
-        if ("BOOK".equals(asset.getMediaType())) {
-            BookDetail detail = context.getDetail(BookDetail.class);
-            if (detail != null) {
-                if (detail.getAssetId() == null) detail.setAssetId(asset.getId());
-                bookDetailRepository.save(detail);
-                context.addLog("ok", "保存书籍详情");
-            }
-        }
-
+        // EPUB 文件写入（纯文件 I/O，不涉及数据库）
         byte[] epubBytes = context.getPipelineData(PipelineKeys.CONVERTED_EPUB, byte[].class);
         if (epubBytes != null) {
-            writeEpubFile(context, asset, epubBytes);
+            writeEpubFile(context, draft, epubBytes);
             context.addLog("ok", "写入 EPUB 文件: " + epubBytes.length + " 字节");
         }
 
+        // 记录原始文件（AssetFile 不属于 Draft，直接写）
         UUID storageNodeId = context.getPipelineData(PipelineKeys.STORAGE_NODE_ID, UUID.class);
         if (storageNodeId != null) {
             AssetFile originalFile = AssetFile.builder()
-                    .assetId(asset.getId()).storageNodeId(storageNodeId)
+                    .assetId(assetId).storageNodeId(storageNodeId)
                     .fileFormat(context.getPipelineData(PipelineKeys.DETECTED_FORMAT, String.class))
                     .relativePath(context.getPipelineData(PipelineKeys.RELATIVE_PATH, String.class))
                     .isPrimary(epubBytes == null).build();
@@ -77,11 +67,11 @@ public class ArchiveNode extends BaseOutputNode {
             context.addLog("ok", "记录原始文件");
         }
 
-        context.addLog("ok", "归档完成: id=" + asset.getId() + ", 标题=" + asset.getTitle());
-        log.info("[ArchiveNode] Asset archived: id={}, title={}", asset.getId(), asset.getTitle());
+        context.addLog("ok", "归档完成: id=" + assetId + ", 标题=" + draft.getTitle());
+        log.info("[ArchiveNode] Asset archived: id={}, title={}", assetId, draft.getTitle());
     }
 
-    private void writeEpubFile(TaskContext context, Asset asset, byte[] epubBytes) throws IOException {
+    private void writeEpubFile(TaskContext context, AssetDraft draft, byte[] epubBytes) throws IOException {
         String outputDir = "/tmp/unified-media-cms/output";
         UUID outputNodeId = null;
         Object targetPath = context.getPipelineData(PipelineKeys.TARGET_PATH, Object.class);
@@ -98,7 +88,7 @@ public class ArchiveNode extends BaseOutputNode {
         Files.createDirectories(epubPath.getParent());
         Files.write(epubPath, epubBytes);
         AssetFile epubFile = AssetFile.builder()
-                .assetId(asset.getId()).storageNodeId(outputNodeId)
+                .assetId(context.getAssetId()).storageNodeId(outputNodeId)
                 .fileFormat("EPUB").relativePath(epubFileName)
                 .fileSize((long) epubBytes.length).isPrimary(true).build();
         mediaFileRepository.save(epubFile);

@@ -3,7 +3,7 @@ package com.unifiedmedia.cms.pipeline.payload;
 import java.util.List;
 
 /**
- * 单节点执行结果 — PipelineEngine 每个节点执行后产出，FileTaskExecutor 批量落库。
+ * 单节点执行结果 — PipelineEngine 每个节点执行后产出，FileTaskLifecycleManager 批量落库。
  */
 public record NodeExecutionResult(
     String nodeName,

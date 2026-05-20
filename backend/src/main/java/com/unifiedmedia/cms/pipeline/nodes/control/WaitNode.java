@@ -1,4 +1,5 @@
 package com.unifiedmedia.cms.pipeline.nodes.control;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
@@ -7,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 @Slf4j
+@NodeDef(name = "WaitNode", label = "延时等待", icon = "⏳", type = NodeType.FLOW_CONTROL)
 public class WaitNode extends BaseFlowControlNode {
 
     public WaitNode() {

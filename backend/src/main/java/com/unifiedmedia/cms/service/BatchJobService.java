@@ -1,11 +1,10 @@
 package com.unifiedmedia.cms.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unifiedmedia.cms.entity.*;
 import com.unifiedmedia.cms.pipeline.core.*;
+import com.unifiedmedia.cms.pipeline.nodes.io.JobSourceScannerNode;
 import com.unifiedmedia.cms.plugin.NodeRegistry;
-import com.unifiedmedia.cms.pipeline.payload.FileCandidate;
+import com.unifiedmedia.cms.pipeline.core.VfsFile;
 import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
 import com.unifiedmedia.cms.pipeline.spi.PipelineEventListener;
 import com.unifiedmedia.cms.repository.*;
@@ -32,22 +31,22 @@ public class BatchJobService {
     private final TaskRepository taskRepository;
     private final TemplateRepository templateRepository;
     private final TaskNodeLogRepository taskNodeLogRepository;
-    private final ObjectMapper objectMapper;
+    private final StorageNodeRepository storageNodeRepository;
     private final List<PipelineEventListener> eventListeners;
 
-    private final FileTaskExecutor fileTaskExecutor;
+    private final FileTaskLifecycleManager fileTaskLifecycleManager;
     private final Executor pipelineTaskExecutor;
     private final TransactionTemplate transactionTemplate;
+    private final PipelineGraphParser graphParser;
+    private final JobSourceScannerNode sourceScanner;
 
     private final Map<String, PipelineNode> nodeMap = new ConcurrentHashMap<>();
-    private final Map<UUID, ParsedGraph> graphCache = new ConcurrentHashMap<>();
-
-    private record ParsedGraph(List<Map<String, Object>> nodes, List<Map<String, Object>> edges, List<String> sorted) {}
+    private final Map<UUID, PipelineGraphParser.DagResult> graphCache = new ConcurrentHashMap<>();
 
     private Map<String, PipelineNode> getNodeMap() {
         if (nodeMap.isEmpty() || nodeMap.size() != nodeRegistry.getNodes().size()) {
             nodeMap.clear();
-            for (PipelineNode n : nodeRegistry.getNodes()) nodeMap.put(n.getNodeName(), n);
+            for (PipelineNode n : nodeRegistry.getNodes()) nodeMap.put(NodeMetaReader.getNodeName(n), n);
         }
         return nodeMap;
     }
@@ -63,6 +62,7 @@ public class BatchJobService {
                 : templateRepository.findByIsDefaultTrue().orElseThrow(() -> new IllegalArgumentException("没有默认模板"));
         String graph = t.getGraphPayload();
         if (graph == null || graph.isBlank()) throw new IllegalArgumentException("模板无 graph_payload");
+        graphParser.parseAndValidate(graph); // 提交时强制校验，防死循环恶意发包
 
         BatchJob job = BatchJob.builder().name(jobName).templateId(t.getId()).status("PENDING").executionGraph(graph).build();
         if (inputPath != null && !inputPath.isEmpty()) {
@@ -129,14 +129,17 @@ public class BatchJobService {
             return;
         }
 
-        // 3. 构建 FileCandidate
-        FileCandidate candidate = new FileCandidate(
-                ft.getFilePath(), file.getName(),
-                mimeToFormat(null, ft.getFilePath()), mimeToFormat(null, ft.getFilePath()));
+        // 3. 构建 VfsFile
+        VfsFile candidate = VfsFile.builder()
+                .remotePath(ft.getFilePath())
+                .fileName(file.getName())
+                .mimeType(null)
+                .format(MediaFormat.fromExtension(ft.getFilePath()))
+                .build();
 
         // 4. 解析执行图
-        ParsedGraph parsed = getOrParseGraph(job.getId(), job.getExecutionGraph());
-        if (parsed == null || parsed.nodes.isEmpty()) {
+        PipelineGraphParser.DagResult parsed = getOrParseGraph(job.getId(), job.getExecutionGraph());
+        if (parsed == null || parsed.nodes().isEmpty()) {
             ft.setStatus("FAILED");
             ft.setErrorMessage("执行图为空");
             taskRepository.save(ft);
@@ -147,12 +150,12 @@ public class BatchJobService {
         }
 
         // 5. 提取全局配置
-        Map<String, Object> globalConfigs = extractGlobalConfigs(buildBaseContext(job));
+        Map<String, Object> globalConfigs = extractGlobalConfigs(job);
         Map<String, PipelineNode> nm = new HashMap<>(getNodeMap());
 
-        // 6. 委托 FileTaskExecutor 执行
+        // 6. 委托 FileTaskLifecycleManager 执行
         try {
-            fileTaskExecutor.executeFilePipeline(job.getId(), candidate, globalConfigs, parsed.nodes, parsed.sorted, nm);
+            fileTaskLifecycleManager.executeFilePipeline(job.getId(), candidate, globalConfigs, parsed.nodes(), parsed.sorted(), nm);
             log.info("[BatchJob] retry task {} completed for file: {}", taskId, ft.getFilePath());
         } catch (Exception e) {
             log.error("[BatchJob] retry task {} failed: {}", taskId, e.getMessage());
@@ -217,23 +220,15 @@ public class BatchJobService {
         job.setStatus("RUNNING");
         jobRepository.save(job);
 
-        ParsedGraph parsed = getOrParseGraph(jobId, job.getExecutionGraph());
-        if (parsed == null || parsed.nodes.isEmpty()) {
+        PipelineGraphParser.DagResult parsed = getOrParseGraph(jobId, job.getExecutionGraph());
+        if (parsed == null || parsed.nodes().isEmpty()) {
             job.setStatus("FAILED");
             jobRepository.save(job);
             return;
         }
 
-        TaskContext baseCtx = buildBaseContext(job);
-
-        // Run FileSnifferNode
-        List<FileCandidate> files = runSniffer(job, parsed, baseCtx);
-        if (files == null) {
-            job.setStatus("FAILED");
-            jobRepository.save(job);
-            return;
-        }
-
+        // 使用系统级 JobSourceScannerNode 扫描源目录
+        List<VfsFile> files = scanSourceFiles(job);
         if (files.isEmpty()) {
             job.setStatus("FAILED");
             jobRepository.save(job);
@@ -241,13 +236,13 @@ public class BatchJobService {
         }
 
         // Extract global configs
-        Map<String, Object> globalConfigs = extractGlobalConfigs(baseCtx);
+        Map<String, Object> globalConfigs = extractGlobalConfigs(job);
         Map<String, PipelineNode> nm = new HashMap<>(getNodeMap());
 
-        // Concurrent dispatch: each file runs in its own transaction via FileTaskExecutor
+        // Concurrent dispatch: each file runs in its own transaction via FileTaskLifecycleManager
         List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (FileCandidate file : files) {
-            futures.add(CompletableFuture.runAsync(() -> fileTaskExecutor.executeFilePipeline(jobId, file, globalConfigs, parsed.nodes, parsed.sorted, nm), pipelineTaskExecutor));
+        for (VfsFile file : files) {
+            futures.add(CompletableFuture.runAsync(() -> fileTaskLifecycleManager.executeFilePipeline(jobId, file, globalConfigs, parsed.nodes(), parsed.sorted(), nm), pipelineTaskExecutor));
         }
 
         try {
@@ -262,116 +257,43 @@ public class BatchJobService {
         }
     }
 
-    /** 跑 FileSniffer 节点，返回 FileCandidate 列表。返回 null 表示执行失败。 */
-    private List<FileCandidate> runSniffer(BatchJob job, ParsedGraph parsed, TaskContext ctx) {
-        for (String nodeId : parsed.sorted) {
-            Map<String, Object> def = findNodeDef(parsed.nodes, nodeId);
-            if (!"FileSnifferNode".equals(def.get("name"))) continue;
-            PipelineNode sniffer = getNodeMap().get("FileSnifferNode");
-            if (sniffer == null) break;
-            injectNodeConfig(def, ctx);
-            if (!sniffer.canExecute(ctx)) break;
-            try {
-                sniffer.execute(ctx);
-            } catch (Exception ex) {
-                log.error("[BatchJob] Sniffer failed: {}", ex.getMessage(), ex);
-                return null;
-            }
-            return ctx.getPipelineList(PipelineKeys.FILE_CANDIDATES, FileCandidate.class);
-        }
-        return List.of(); // 没有 FileSniffer
-    }
-
-    // ==================== 上下文 ====================
-
-    private TaskContext buildBaseContext(BatchJob job) {
-        TaskContext ctx = new StandardTaskContext(UUID.randomUUID(), null);
+    /** 使用系统级 JobSourceScannerNode 扫描源目录 */
+    private List<VfsFile> scanSourceFiles(BatchJob job) {
         String path = job.getInputPathText();
-        if (path != null) {
-            if (path.matches(".*\\.(txt|TXT|epub|EPUB|pdf|PDF|mp4|mkv)$")) ctx.setPipelineData(PipelineKeys.ABSOLUTE_PATH, path);
-            else ctx.setPipelineData(PipelineKeys.SOURCE_DIRECTORY, path);
+        UUID storageNodeId = job.getInputStorageNodeId();
+        if (path == null || storageNodeId == null) {
+            // 单文件模式：inputPath 是文件路径而非目录
+            if (path != null && path.matches(".*\\.(txt|TXT|epub|EPUB|pdf|PDF|mp4|mkv)$")) {
+                VfsFile f = VfsFile.builder().remotePath(path)
+                        .fileName(java.nio.file.Path.of(path).getFileName().toString())
+                        .format(MediaFormat.fromExtension(path)).build();
+                return List.of(f);
+            }
+            return List.of();
         }
-        if (job.getInputStorageNodeId() != null) ctx.setPipelineData(PipelineKeys.STORAGE_NODE_ID, job.getInputStorageNodeId());
-        if (job.getOutputPathText() != null) {
-            ctx.setPipelineData(PipelineKeys.TARGET_PATH, Map.of("storage_node_id", job.getOutputStorageNodeId() != null ? job.getOutputStorageNodeId().toString() : "",
-                    "path", job.getOutputPathText()));
-        }
-        return ctx;
+        StorageNode node = storageNodeRepository.findById(storageNodeId).orElse(null);
+        if (node == null) return List.of();
+        return sourceScanner.scan(node.getProviderType(), node, path);
     }
 
     // ==================== 工具方法 ====================
 
-    private Map<String, Object> extractGlobalConfigs(TaskContext ctx) {
+    private Map<String, Object> extractGlobalConfigs(BatchJob job) {
         Map<String, Object> globalConfigs = new LinkedHashMap<>();
-        Object targetPath = ctx.getPipelineData("targetPath", Object.class);
-        if (targetPath != null) globalConfigs.put("targetPath", targetPath);
-        Object sid = ctx.getPipelineData(PipelineKeys.STORAGE_NODE_ID, Object.class);
-        if (sid != null) globalConfigs.put("storageNodeId", sid);
-        Object srcDir = ctx.getPipelineData(PipelineKeys.SOURCE_DIRECTORY, Object.class);
-        if (srcDir != null) globalConfigs.put("sourceDirectory", srcDir);
+        if (job.getOutputPathText() != null) {
+            globalConfigs.put("targetPath", Map.of("storage_node_id",
+                    job.getOutputStorageNodeId() != null ? job.getOutputStorageNodeId().toString() : "",
+                    "path", job.getOutputPathText()));
+        }
+        if (job.getInputStorageNodeId() != null) globalConfigs.put("storageNodeId", job.getInputStorageNodeId());
+        if (job.getInputPathText() != null) globalConfigs.put("sourceDirectory", job.getInputPathText());
         return globalConfigs;
     }
 
-    private String mimeToFormat(String mime, String path) {
-        if (mime != null && mime.contains("text/plain")) return "TXT";
-        if (mime != null && mime.contains("epub")) return "EPUB";
-        if (path != null) {
-            String lc = path.toLowerCase();
-            if (lc.endsWith(".txt")) return "TXT";
-            if (lc.endsWith(".epub")) return "EPUB";
-            if (lc.endsWith(".pdf")) return "PDF";
-        }
-        if (mime != null && mime.startsWith("video/")) return "VIDEO";
-        return "UNKNOWN";
-    }
+    // ==================== 图算法（委托 PipelineGraphParser）====================
 
-    private void injectNodeConfig(Map<String, Object> nodeDef, TaskContext ctx) {
-        Object cfg = nodeDef.get("config");
-        if (cfg instanceof Map<?,?> m) {
-            m.forEach((k, v) -> {
-                if (k instanceof String keyStr) ctx.setPipelineData(keyStr, v);
-            });
-        }
-        Object cond = nodeDef.get("condition");
-        if (cond instanceof String s && !s.isBlank()) ctx.setPipelineData(PipelineKeys.ROUTER_CONDITION, s);
-    }
-
-    private Map<String, Object> findNodeDef(List<Map<String, Object>> nodes, String id) {
-        return nodes.stream().filter(n -> id.equals(n.get("id"))).findFirst().orElse(Map.of());
-    }
-
-    // ==================== 图算法 ====================
-
-    private ParsedGraph getOrParseGraph(UUID jobId, String graph) {
-        return graphCache.computeIfAbsent(jobId, id -> {
-            Map<String, Object> g = parseGraph(graph);
-            if (g == null) return null;
-            List<Map<String, Object>> ns = (List<Map<String, Object>>) g.get("nodes");
-            List<Map<String, Object>> es = (List<Map<String, Object>>) g.get("edges");
-            return new ParsedGraph(ns, es, topoSort(ns, es));
-        });
-    }
-
-    private Map<String, Object> parseGraph(String s) {
-        if (s == null || s.isBlank()) return null;
-        try { return objectMapper.readValue(s, new TypeReference<>() {}); }
-        catch (Exception e) { log.error("parse graph failed", e); return null; }
-    }
-
-    private List<String> topoSort(List<Map<String, Object>> nodes, List<Map<String, Object>> edges) {
-        Map<String, Integer> inDeg = new LinkedHashMap<>();
-        Map<String, List<String>> adj = new HashMap<>();
-        for (Map<String, Object> n : nodes) { String id = (String) n.get("id"); inDeg.put(id, 0); adj.put(id, new ArrayList<>()); }
-        for (Map<String, Object> e : edges) {
-            String s = (String) e.get("source"), t = (String) e.get("target");
-            if (adj.containsKey(s) && inDeg.containsKey(t)) { adj.get(s).add(t); inDeg.merge(t, 1, Integer::sum); }
-        }
-        Queue<String> q = new LinkedList<>();
-        for (var e : inDeg.entrySet()) if (e.getValue() == 0) q.add(e.getKey());
-        List<String> r = new ArrayList<>();
-        while (!q.isEmpty()) { String n = q.poll(); r.add(n); for (String next : adj.getOrDefault(n, List.of())) { int d = inDeg.get(next) - 1; inDeg.put(next, d); if (d == 0) q.add(next); } }
-        if (r.size() != nodes.size()) throw new IllegalStateException("Cycle detected");
-        return r;
+    private PipelineGraphParser.DagResult getOrParseGraph(UUID jobId, String graph) {
+        return graphCache.computeIfAbsent(jobId, id -> graphParser.parseAndValidate(graph));
     }
 
     // ==================== 查询 ====================

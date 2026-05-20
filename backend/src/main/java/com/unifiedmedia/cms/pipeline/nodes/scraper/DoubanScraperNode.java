@@ -1,6 +1,6 @@
 package com.unifiedmedia.cms.pipeline.nodes.scraper;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 
-import com.unifiedmedia.cms.entity.Asset;
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Slf4j
-public class DoubanScraperNode extends BaseProcessingNode {
+@NodeDef(name = "DoubanScraperNode", label = "豆瓣刮削", icon = "🌐", type = NodeType.PROCESSING, description = "从豆瓣自动补全图书元数据和封面图")
+public class DoubanScraperNode extends BaseProcessingNode implements EntityDataOperator {
 
     private static final String DOUBAN_SEARCH_URL = "https://search.douban.com/book/subject_search";
     private static final int MAX_CANDIDATES = 5;
@@ -36,13 +37,13 @@ public class DoubanScraperNode extends BaseProcessingNode {
 
     @Override
     public boolean canExecute(TaskContext context) {
-        Asset asset = context.getAsset();
-        return asset != null && asset.getTitle() != null && !asset.getTitle().isBlank();
+        AssetDraft draft = context.getAssetDraft();
+        return draft != null && draft.getTitle() != null && !draft.getTitle().isBlank();
     }
 
     @Override
     public void execute(TaskContext context) throws Exception {
-        String originalTitle = context.getAsset().getTitle();
+        String originalTitle = context.getAssetDraft().getTitle();
         String cleanTitle = cleanSearchQuery(originalTitle);
 
         log.info("[DoubanScraperNode] Scraping douban for: {} (cleaned: {})", originalTitle, cleanTitle);
@@ -118,14 +119,14 @@ public class DoubanScraperNode extends BaseProcessingNode {
     }
 
     private void applyResult(TaskContext context, ScrapeCandidate result) {
-        Asset asset = context.getAsset();
+        AssetDraft draft = context.getAssetDraft();
 
-        if (result.title() != null && (asset.getTitle() == null || asset.getTitle().isBlank())) {
-            asset.updateTitle(result.title());
+        if (result.title() != null && (draft.getTitle() == null || draft.getTitle().isBlank())) {
+            draft.setTitle(result.title());
         }
 
-        if (result.coverUrl() != null && (asset.getCoverUrl() == null || asset.getCoverUrl().isBlank())) {
-            asset.updateCoverUrl(result.coverUrl());
+        if (result.coverUrl() != null && (draft.getCoverUrl() == null || draft.getCoverUrl().isBlank())) {
+            draft.setCoverUrl(result.coverUrl());
         }
     }
 

@@ -1,5 +1,7 @@
 package com.unifiedmedia.cms.pipeline.nodes.parser;
 
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
+
 import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.payload.*;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +21,8 @@ import java.util.stream.Collectors;
  * 4. 完整章节目录（支持 20+ 种章节格式）
  */
 @Slf4j
-public class ChapterParserNode extends BaseProcessingNode {
+@NodeDef(name = "ChapterParserNode", label = "章节解析", icon = "📑", type = NodeType.PROCESSING)
+public class ChapterParserNode extends BaseProcessingNode implements EntityDataOperator {
 
     public ChapterParserNode() {
         super("ChapterParserNode", "章节解析", "📑",
@@ -110,7 +113,7 @@ public class ChapterParserNode extends BaseProcessingNode {
         }
 
         if (title != null) {
-            context.getAsset().updateTitle(title);
+            context.getAssetDraft().setTitle(title);
             log.info("[ChapterParserNode] Found title: {}", title);
         }
 
@@ -126,7 +129,7 @@ public class ChapterParserNode extends BaseProcessingNode {
         // 5. 简介作为摘要
         if (!introText.isBlank()) {
             String summary = introText.length() > 2000 ? introText.substring(0, 2000) : introText;
-            context.getAsset().updateSummary(summary);
+            context.getAssetDraft().setSummary(summary);
             log.info("[ChapterParserNode] Extracted intro: {} chars", summary.length());
         }
 

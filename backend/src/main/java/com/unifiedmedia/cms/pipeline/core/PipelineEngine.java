@@ -1,4 +1,5 @@
 package com.unifiedmedia.cms.pipeline.core;
+import com.unifiedmedia.cms.pipeline.nodes.io.FileSnifferNode;
 
 import com.unifiedmedia.cms.pipeline.payload.NodeExecutionResult;
 import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
@@ -22,13 +23,13 @@ public class PipelineEngine {
         List<NodeExecutionResult> results = new ArrayList<>();
 
         for (PipelineNode node : executionPlan) {
-            if ("FileSnifferNode".equals(node.getNodeName())) continue;
+            if (FileSnifferNode.NODE_NAME.equals(NodeMetaReader.getNodeName(node))) continue;
 
-            injectNodeConfig(graphNodes, sortedNodeIds, node.getNodeName(), context);
+            injectNodeConfig(graphNodes, sortedNodeIds, NodeMetaReader.getNodeName(node), context);
 
             if (!node.canExecute(context)) {
                 results.add(new NodeExecutionResult(
-                        node.getNodeName(), node.getNodeLabel(), "SKIPPED", 0L,
+                        NodeMetaReader.getNodeName(node), NodeMetaReader.getNodeLabel(node), "SKIPPED", 0L,
                         List.copyOf(context.drainLogs()), "Precondition not met"));
                 continue;
             }
@@ -37,12 +38,12 @@ public class PipelineEngine {
             try {
                 node.execute(context);
                 results.add(new NodeExecutionResult(
-                        node.getNodeName(), node.getNodeLabel(), "SUCCESS",
+                        NodeMetaReader.getNodeName(node), NodeMetaReader.getNodeLabel(node), "SUCCESS",
                         System.currentTimeMillis() - start,
                         List.copyOf(context.drainLogs()), null));
             } catch (Exception e) {
                 results.add(new NodeExecutionResult(
-                        node.getNodeName(), node.getNodeLabel(), "FAILED",
+                        NodeMetaReader.getNodeName(node), NodeMetaReader.getNodeLabel(node), "FAILED",
                         System.currentTimeMillis() - start,
                         List.copyOf(context.drainLogs()), e.getMessage()));
                 break;  // 停止后续节点，但返回已收集的结果

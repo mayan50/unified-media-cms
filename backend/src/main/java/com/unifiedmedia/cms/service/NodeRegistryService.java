@@ -1,6 +1,7 @@
 package com.unifiedmedia.cms.service;
 
 import com.unifiedmedia.cms.pipeline.core.ConfigFieldDef;
+import com.unifiedmedia.cms.pipeline.core.NodeMetaReader;
 import com.unifiedmedia.cms.pipeline.core.NodeType;
 import com.unifiedmedia.cms.plugin.NodeRegistry;
 import lombok.*;
@@ -25,7 +26,7 @@ public class NodeRegistryService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (var node : registry.getNodes()) {
             Map<String, Object> info = new HashMap<>();
-            info.put("name", node.getNodeName());
+            info.put("name", NodeMetaReader.getNodeName(node));
             info.put("className", node.getClass().getSimpleName());
             result.add(info);
         }
@@ -37,20 +38,20 @@ public class NodeRegistryService {
      */
     public List<CategoryDef> getRegistry() {
         // 按 NodeType 分组 — 每次请求实时从动态注册表读取
-        Map<NodeType, List<NodeDef>> grouped = registry.getNodes().stream()
-                .map(node -> NodeDef.builder()
-                        .name(node.getNodeName())
-                        .label(node.getNodeLabel())
-                        .icon(node.getNodeIcon())
-                        .description(node.getDescription())
-                        .nodeType(node.getNodeType())
+        Map<NodeType, List<NodeDefDto>> grouped = registry.getNodes().stream()
+                .map(node -> NodeDefDto.builder()
+                        .name(NodeMetaReader.getNodeName(node))
+                        .label(NodeMetaReader.getNodeLabel(node))
+                        .icon(NodeMetaReader.getNodeIcon(node))
+                        .description(NodeMetaReader.getDescription(node))
+                        .nodeType(NodeMetaReader.getNodeType(node))
                         .hasConfig(node.getConfigSchema() != null && !node.getConfigSchema().isEmpty())
                         .configSchema(node.getConfigSchema() != null ? mapConfigFields(node.getConfigSchema()) : List.of())
                         .uiSummaryKeys(node.getUiSummaryKeys() != null ? node.getUiSummaryKeys() : List.of())
                         .available(true)
                         .build())
                 .collect(Collectors.groupingBy(
-                        NodeDef::getNodeType,
+                        NodeDefDto::getNodeType,
                         LinkedHashMap::new,
                         Collectors.toList()));
 
@@ -68,16 +69,16 @@ public class NodeRegistryService {
     /**
      * 按名称查找单个节点定义
      */
-    public Optional<NodeDef> findNode(String name) {
+    public Optional<NodeDefDto> findNode(String name) {
         return registry.getNodes().stream()
-                .filter(n -> n.getNodeName().equals(name))
+                .filter(n -> NodeMetaReader.getNodeName(n).equals(name))
                 .findFirst()
-                .map(n -> NodeDef.builder()
-                        .name(n.getNodeName())
-                        .label(n.getNodeLabel())
-                        .icon(n.getNodeIcon())
-                        .description(n.getDescription())
-                        .nodeType(n.getNodeType())
+                .map(n -> NodeDefDto.builder()
+                        .name(NodeMetaReader.getNodeName(n))
+                        .label(NodeMetaReader.getNodeLabel(n))
+                        .icon(NodeMetaReader.getNodeIcon(n))
+                        .description(NodeMetaReader.getDescription(n))
+                        .nodeType(NodeMetaReader.getNodeType(n))
                         .hasConfig(n.getConfigSchema() != null && !n.getConfigSchema().isEmpty())
                         .configSchema(n.getConfigSchema() != null ? mapConfigFields(n.getConfigSchema()) : List.of())
                         .uiSummaryKeys(n.getUiSummaryKeys() != null ? n.getUiSummaryKeys() : List.of())
@@ -104,7 +105,7 @@ public class NodeRegistryService {
         private String label;
         private String icon;
         @Builder.Default
-        private List<NodeDef> nodes = List.of();
+        private List<NodeDefDto> nodes = List.of();
     }
 
     @Data
@@ -112,7 +113,7 @@ public class NodeRegistryService {
     @NoArgsConstructor
     @AllArgsConstructor
     @Accessors(chain = true)
-    public static class NodeDef {
+    public static class NodeDefDto {
         private String name;
         private String label;
         private String icon;

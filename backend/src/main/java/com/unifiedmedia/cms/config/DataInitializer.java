@@ -46,7 +46,7 @@ public class DataInitializer implements CommandLineRunner {
         String graph = """
             {
               "nodes": [
-                {"id":"FileSnifferNode_0","name":"FileSnifferNode","label":"文件嗅探","icon":"🔍","config":{},"condition":""},
+                {"id":"FileSnifferNode_0","name":FileSnifferNode.NODE_NAME,"label":"文件嗅探","icon":"🔍","config":{},"condition":""},
                 {"id":"RouterNode_1","name":"RouterNode","label":"条件分支","icon":"🔀","config":{},"condition":"detectedFormat == 'TXT'"},
                 {"id":"TxtExtractorNode_2","name":"TxtExtractorNode","label":"TXT 采样","icon":"📄","config":{},"condition":""},
                 {"id":"EpubMetaParserNode_3","name":"EpubMetaParserNode","label":"EPUB 解析","icon":"📖","config":{},"condition":""},

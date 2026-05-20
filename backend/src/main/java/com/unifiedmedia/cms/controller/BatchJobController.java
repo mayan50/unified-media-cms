@@ -3,6 +3,7 @@ package com.unifiedmedia.cms.controller;
 import com.unifiedmedia.cms.dto.JobSubmitRequest;
 import com.unifiedmedia.cms.entity.BatchJob;
 import com.unifiedmedia.cms.service.BatchJobService;
+import com.unifiedmedia.cms.service.PipelineGraphParser;
 import com.unifiedmedia.cms.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ public class BatchJobController {
 
     private final BatchJobService jobService;
     private final TaskService taskService;
+    private final PipelineGraphParser graphParser;
 
     @PostMapping
     public ResponseEntity<BatchJob> createJob(@RequestBody JobSubmitRequest req) {
@@ -79,6 +81,19 @@ public class BatchJobController {
     @GetMapping("/{jobId}")
     public ResponseEntity<BatchJob> getJob(@PathVariable UUID jobId) {
         return jobService.getJob(jobId).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/validate-graph")
+    public ResponseEntity<Map<String, Object>> validateGraph(@RequestBody String graphJson) {
+        try {
+            PipelineGraphParser.DagResult result = graphParser.parseAndValidate(graphJson);
+            return ResponseEntity.ok(Map.of("status", "OK", "message", "图结构合法，无死循环",
+                    "nodeCount", result.nodes().size(), "topoSorted", result.sorted()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", "无效的图结构: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/{jobId}/tasks")

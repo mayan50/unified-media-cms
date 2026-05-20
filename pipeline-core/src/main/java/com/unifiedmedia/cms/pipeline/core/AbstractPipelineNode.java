@@ -3,11 +3,10 @@ package com.unifiedmedia.cms.pipeline.core;
 import java.util.List;
 
 /**
- * 管道节点抽象基类 — 提供元数据的默认存储
+ * 管道节点抽象基类 — 过渡期保留构造函数传参方式。
  * <p>
- * 子类通过构造函数注入元数据，只需实现 canExecute 和 execute。
- * 四种类型的子类：{@link BaseInputNode}、{@link BaseProcessingNode}、
- * {@link BaseOutputNode}、{@link BaseFlowControlNode}
+ * 静态元数据优先从 {@link com.unifiedmedia.cms.pipeline.core.annotation.NodeDef} 注解读取，
+ * 此基类的 getter 方法作为回退（旧节点未标注注解时使用）。
  */
 public abstract class AbstractPipelineNode implements PipelineNode {
 
@@ -31,19 +30,10 @@ public abstract class AbstractPipelineNode implements PipelineNode {
         this.uiSummaryKeys = uiSummaryKeys != null ? uiSummaryKeys : List.of();
     }
 
-    @Override
     public String getNodeName() { return nodeName; }
-
-    @Override
     public String getNodeLabel() { return nodeLabel; }
-
-    @Override
     public String getNodeIcon() { return nodeIcon; }
-
-    @Override
     public String getDescription() { return description; }
-
-    @Override
     public NodeType getNodeType() { return nodeType; }
 
     @Override
