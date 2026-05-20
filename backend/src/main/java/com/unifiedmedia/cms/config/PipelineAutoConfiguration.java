@@ -2,12 +2,10 @@ package com.unifiedmedia.cms.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unifiedmedia.cms.pipeline.appliers.BookDetailApplier;
-import com.unifiedmedia.cms.pipeline.core.PipelineEngine;
 import com.unifiedmedia.cms.pipeline.loaders.BookDetailLoader;
 import com.unifiedmedia.cms.pipeline.mergers.CreatorRelationMerger;
 import com.unifiedmedia.cms.pipeline.mergers.TagRelationMerger;
 import com.unifiedmedia.cms.pipeline.nodes.io.ArchiveNode;
-import com.unifiedmedia.cms.pipeline.nodes.io.FileSnifferNode;
 import com.unifiedmedia.cms.pipeline.nodes.processing.LlmAnalyzerNode;
 import com.unifiedmedia.cms.pipeline.nodes.scraper.DoubanScraperNode;
 import com.unifiedmedia.cms.pipeline.nodes.scraper.TmdbScraperNode;
@@ -91,8 +89,6 @@ public class PipelineAutoConfiguration {
     }
 
     // ── Built-in Nodes (unmigrated) ──
-    @Bean public FileSnifferNode fileSnifferNode(NodeRegistry r) {
-        var n = new FileSnifferNode(); r.registerBuiltIn(n); return n; }
     @Bean public ArchiveNode archiveNode(AssetRepository ar, AssetFileRepository afr, BookDetailRepository bdr,
                                     List<RelationMerger> mergers, NodeRegistry r) {
         var n = new ArchiveNode(ar, afr, bdr, mergers); r.registerBuiltIn(n); return n; }

@@ -1,4 +1,4 @@
-package com.unifiedmedia.cms.service;
+package com.unifiedmedia.cms.pipeline.engine;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

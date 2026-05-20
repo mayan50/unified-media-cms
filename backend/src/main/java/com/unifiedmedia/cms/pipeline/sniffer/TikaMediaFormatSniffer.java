@@ -1,4 +1,4 @@
-package com.unifiedmedia.cms.service;
+package com.unifiedmedia.cms.pipeline.sniffer;
 
 import com.unifiedmedia.cms.pipeline.core.MediaFormat;
 import com.unifiedmedia.cms.pipeline.core.MediaFormatSniffer;

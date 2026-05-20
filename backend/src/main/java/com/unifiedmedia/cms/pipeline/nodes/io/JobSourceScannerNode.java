@@ -5,7 +5,7 @@ import com.unifiedmedia.cms.pipeline.core.*;
 import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 import com.unifiedmedia.cms.pipeline.payload.PipelineKeys;
 import com.unifiedmedia.cms.repository.StorageNodeRepository;
-import com.unifiedmedia.cms.service.StorageAdapterRegistry;
+import com.unifiedmedia.cms.pipeline.storage.StorageAdapterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

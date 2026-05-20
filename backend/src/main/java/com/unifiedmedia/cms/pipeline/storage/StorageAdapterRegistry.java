@@ -1,4 +1,4 @@
-package com.unifiedmedia.cms.service;
+package com.unifiedmedia.cms.pipeline.storage;
 
 import com.unifiedmedia.cms.pipeline.core.StorageAdapter;
 import lombok.RequiredArgsConstructor;

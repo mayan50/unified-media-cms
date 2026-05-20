@@ -3,7 +3,7 @@ package com.unifiedmedia.cms.controller;
 import com.unifiedmedia.cms.dto.JobSubmitRequest;
 import com.unifiedmedia.cms.entity.BatchJob;
 import com.unifiedmedia.cms.service.BatchJobService;
-import com.unifiedmedia.cms.service.PipelineGraphParser;
+import com.unifiedmedia.cms.pipeline.engine.PipelineGraphParser;
 import com.unifiedmedia.cms.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

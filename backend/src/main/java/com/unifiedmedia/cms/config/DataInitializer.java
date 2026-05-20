@@ -46,7 +46,7 @@ public class DataInitializer implements CommandLineRunner {
         String graph = """
             {
               "nodes": [
-                {"id":"FileSnifferNode_0","name":FileSnifferNode.NODE_NAME,"label":"文件嗅探","icon":"🔍","config":{},"condition":""},
+                {"id":"JobSourceScannerNode_0","name":"JobSourceScannerNode","label":"文件嗅探","icon":"🔍","config":{},"condition":""},
                 {"id":"RouterNode_1","name":"RouterNode","label":"条件分支","icon":"🔀","config":{},"condition":"detectedFormat == 'TXT'"},
                 {"id":"TxtExtractorNode_2","name":"TxtExtractorNode","label":"TXT 采样","icon":"📄","config":{},"condition":""},
                 {"id":"EpubMetaParserNode_3","name":"EpubMetaParserNode","label":"EPUB 解析","icon":"📖","config":{},"condition":""},
@@ -56,7 +56,7 @@ public class DataInitializer implements CommandLineRunner {
                 {"id":"ArchiveNode_7","name":"ArchiveNode","label":"归档写入","icon":"📦","config":{},"condition":""}
               ],
               "edges": [
-                {"id":"e-0","source":"FileSnifferNode_0","target":"RouterNode_1","sourcePort":"default"},
+                {"id":"e-0","source":"JobSourceScannerNode_0","target":"RouterNode_1","sourcePort":"default"},
                 {"id":"e-1","source":"RouterNode_1","target":"TxtExtractorNode_2","sourcePort":"true"},
                 {"id":"e-2","source":"RouterNode_1","target":"EpubMetaParserNode_3","sourcePort":"false"},
                 {"id":"e-3","source":"TxtExtractorNode_2","target":"LlmAnalyzerNode_4","sourcePort":"default"},
