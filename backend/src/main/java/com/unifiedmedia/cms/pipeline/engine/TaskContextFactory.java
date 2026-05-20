@@ -1,4 +1,4 @@
-package com.unifiedmedia.cms.service;
+package com.unifiedmedia.cms.pipeline.engine;
 
 import com.unifiedmedia.cms.entity.*;
 import com.unifiedmedia.cms.pipeline.core.*;

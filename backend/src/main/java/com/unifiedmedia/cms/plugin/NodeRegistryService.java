@@ -1,4 +1,4 @@
-package com.unifiedmedia.cms.service;
+package com.unifiedmedia.cms.plugin;
 
 import com.unifiedmedia.cms.pipeline.core.ConfigFieldDef;
 import com.unifiedmedia.cms.pipeline.core.NodeMetaReader;

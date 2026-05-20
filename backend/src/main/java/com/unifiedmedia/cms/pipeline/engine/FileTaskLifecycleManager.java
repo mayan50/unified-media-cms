@@ -1,6 +1,7 @@
-package com.unifiedmedia.cms.service;
+package com.unifiedmedia.cms.pipeline.engine;
 
 import com.unifiedmedia.cms.pipeline.core.*;
+import com.unifiedmedia.cms.pipeline.core.annotation.NodeDef;
 import com.unifiedmedia.cms.pipeline.orchestrator.PipelineOrchestrator;
 import com.unifiedmedia.cms.pipeline.payload.NodeExecutionResult;
 import lombok.RequiredArgsConstructor;
@@ -10,10 +11,10 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * 单文件任务生命周期管理器 — 纯壳子，不含任何业务逻辑或 JPA 依赖。
+ * 单文件任务生命周期管理器 — 纯壳子。
  * <p>
- * 职责：构建纯净上下文 → 写启动日志 → 调 Orchestrator → 写结果日志 → 沙箱清理。
- * 不干涉 DAG 流转，跳过、夹心饼干等全由 Orchestrator 处理。
+ * 职责：构建上下文 → 写日志 → 组装执行计划 → 调 Orchestrator → 沙箱清理。
+ * 动态过滤 INPUT 节点和 hiddenFromUI 节点，不硬编码任何节点名。
  */
 @Slf4j
 @Service
@@ -33,8 +34,8 @@ public class FileTaskLifecycleManager {
             ctx = contextFactory.buildContext(jobId, file, globalConfigs);
             logManager.saveStartLog(ctx.getTaskId(), jobId, ctx, "系统前置检查完成，源文件已就绪");
 
-            List<NodeExecutionResult> results = orchestrator.run(
-                    new ArrayList<>(nodeMap.values()), graphNodes, sortedNodeIds, nodeMap, ctx);
+            List<PipelineNode> plan = buildExecutionPlan(graphNodes, sortedNodeIds, nodeMap);
+            List<NodeExecutionResult> results = orchestrator.run(plan, graphNodes, sortedNodeIds, nodeMap, ctx);
 
             logManager.saveNodeResults(jobId, ctx, results);
             logManager.saveFinalStatus(jobId, ctx);
@@ -46,6 +47,35 @@ public class FileTaskLifecycleManager {
         }
     }
 
+    /** 从 sortedNodeIds 组装执行计划，自动过滤 INPUT 和 hiddenFromUI 节点 */
+    private List<PipelineNode> buildExecutionPlan(List<Map<String, Object>> graphNodes,
+                                                   List<String> sortedNodeIds,
+                                                   Map<String, PipelineNode> nodeMap) {
+        List<PipelineNode> plan = new ArrayList<>();
+        for (String nodeId : sortedNodeIds) {
+            String nodeName = findNodeName(graphNodes, nodeId);
+            PipelineNode node = nodeMap.get(nodeName);
+            if (node != null && !isSystemOrInputNode(node)) {
+                plan.add(node);
+            }
+        }
+        return plan;
+    }
+
+    private boolean isSystemOrInputNode(PipelineNode node) {
+        NodeDef def = node.getClass().getAnnotation(NodeDef.class);
+        if (def != null) {
+            if (def.hiddenFromUI()) return true;
+            if (def.type() == NodeType.INPUT || def.type() == NodeType.SYSTEM) return true;
+        }
+        return false;
+    }
+
+    private String findNodeName(List<Map<String, Object>> nodes, String id) {
+        return nodes.stream().filter(n -> id.equals(n.get("id")))
+                .map(n -> (String) n.get("name")).findFirst().orElse(id);
+    }
+
     private void cleanupSandbox(PipelineTaskContext ctx) {
         if (ctx == null) return;
         String path = ctx.getPipelineData("tempSandboxPath", String.class);
@@ -54,4 +84,3 @@ public class FileTaskLifecycleManager {
         }
     }
 }
-

@@ -31,7 +31,6 @@ public class BatchJobService {
     private final TaskRepository taskRepository;
     private final TemplateRepository templateRepository;
     private final TaskNodeLogRepository taskNodeLogRepository;
-    private final StorageNodeRepository storageNodeRepository;
     private final List<PipelineEventListener> eventListeners;
 
     private final FileTaskLifecycleManager fileTaskLifecycleManager;
@@ -259,21 +258,25 @@ public class BatchJobService {
 
     /** 使用系统级 JobSourceScannerNode 扫描源目录 */
     private List<VfsFile> scanSourceFiles(BatchJob job) {
+        PipelineTaskContext ctx = new PipelineTaskContext(UUID.randomUUID(), null);
         String path = job.getInputPathText();
-        UUID storageNodeId = job.getInputStorageNodeId();
-        if (path == null || storageNodeId == null) {
-            // 单文件模式：inputPath 是文件路径而非目录
-            if (path != null && path.matches(".*\\.(txt|TXT|epub|EPUB|pdf|PDF|mp4|mkv)$")) {
-                VfsFile f = VfsFile.builder().remotePath(path)
-                        .fileName(java.nio.file.Path.of(path).getFileName().toString())
-                        .format(MediaFormat.fromExtension(path)).build();
-                return List.of(f);
-            }
+        if (path != null) {
+            if (path.matches(".*\\.(txt|TXT|epub|EPUB|pdf|PDF|mp4|mkv)$"))
+                ctx.setPipelineData(PipelineKeys.ABSOLUTE_PATH, path);
+            else ctx.setPipelineData(PipelineKeys.SOURCE_DIRECTORY, path);
+        }
+        if (job.getInputStorageNodeId() != null)
+            ctx.setPipelineData(PipelineKeys.STORAGE_NODE_ID, job.getInputStorageNodeId());
+        if (job.getOutputPathText() != null)
+            ctx.setPipelineData(PipelineKeys.TARGET_PATH, Map.of("storage_node_id",
+                    job.getOutputStorageNodeId() != null ? job.getOutputStorageNodeId().toString() : "",
+                    "path", job.getOutputPathText()));
+
+        try { sourceScanner.execute(ctx); } catch (Exception e) {
+            log.error("[BatchJob] Scanner failed: {}", e.getMessage(), e);
             return List.of();
         }
-        StorageNode node = storageNodeRepository.findById(storageNodeId).orElse(null);
-        if (node == null) return List.of();
-        return sourceScanner.scan(node.getProviderType(), node, path);
+        return ctx.getPipelineList(PipelineKeys.FILE_CANDIDATES, VfsFile.class);
     }
 
     // ==================== 工具方法 ====================

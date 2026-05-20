@@ -1,5 +1,4 @@
 package com.unifiedmedia.cms.pipeline.orchestrator;
-import com.unifiedmedia.cms.pipeline.nodes.io.FileSnifferNode;
 
 import com.unifiedmedia.cms.entity.Asset;
 import com.unifiedmedia.cms.entity.BookDetail;
@@ -63,10 +62,7 @@ public class PipelineOrchestrator {
         // ── 夹心饼干：组装实际执行列表 ──
         List<PipelineNode> actualPlan = new ArrayList<>();
         actualPlan.add(fetchSandboxNode);         // 系统隐式头节点
-        for (PipelineNode node : executionPlan) {
-            if (FileSnifferNode.NODE_NAME.equals(NodeMetaReader.getNodeName(node))) continue;
-            actualPlan.add(node);
-        }
+        actualPlan.addAll(executionPlan);
         actualPlan.add(sinkUploadNode);           // 系统隐式尾节点
 
         for (PipelineNode node : actualPlan) {

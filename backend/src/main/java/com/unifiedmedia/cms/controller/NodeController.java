@@ -1,6 +1,6 @@
 package com.unifiedmedia.cms.controller;
 
-import com.unifiedmedia.cms.service.NodeRegistryService;
+import com.unifiedmedia.cms.plugin.NodeRegistryService;
 import com.unifiedmedia.cms.service.NodeRegistryService.CategoryDef;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
